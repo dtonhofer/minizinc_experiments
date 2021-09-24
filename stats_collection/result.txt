@@ -1,3 +1,4 @@
+base, round, var_sel, val_sel, limit_s, duration_s, makespan, init_time_s, solve_time_s, solutions, variables, propagators, propagations, nodes, failures, restarts, peak_depth, num_solutions
        prepare1,   0,         largest,              indomain_max,    30,     0,   30,   0.00,   0.01,   15,   71,   78,     4029,      177,       54,    0,   15,  1
        prepare3,   1,     input_order,    indomain_reverse_split,    30,     0,   19,   0.00,   0.01,   26,   86,   92,     6592,      664,      116,    0,   35,  1
        prepare2,   0,        smallest,           indomain_random,    30,     0,   22,   0.00,   0.01,   21,   86,   94,     4405,      218,       83,    0,   16,  1

@@ -3,54 +3,54 @@
 use warnings;
 use strict;
 
-use File::HomeDir;
 use Fcntl qw(:flock SEEK_END);
-use File::Temp qw/ tempfile tempdir /;
+use File::Temp qw(tempfile tempdir);
 use File::Basename;
 use List::Util qw(min max);
 
 my $var_sels = [ 'input_order', 'first_fail', 'smallest', 'largest' ];
 my $val_sels = [ 'indomain_min', 'indomain_max', 'indomain_median', 'indomain_random', 'indomain_split', 'indomain_reverse_split' ];
 
-my $rounds = 4;     # how many rounds to do for each problem (so as to accumulate stats)
+my $rounds  = 4;     # how many rounds to do for each problem (so as to accumulate stats)
+my $limit_s = 30;    # processing time limit for optimization (in seconds) 
 
 # List the data files and for each, give a time limit in seconds and a number of rounds.
 # 0 rounds means don't run this.
 
 my $data_files = {
-   'prepare1.dzn'  => { limit_s => 30, rounds => $rounds },
-   'prepare2.dzn'  => { limit_s => 30, rounds => $rounds },
-   'prepare3.dzn'  => { limit_s => 30, rounds => $rounds },
-   'prepare4.dzn'  => { limit_s => 30, rounds => $rounds },
-   'prepare5.dzn'  => { limit_s => 30, rounds => $rounds },
-   'prepare6.dzn'  => { limit_s => 30, rounds => $rounds },
-   'prepare7.dzn'  => { limit_s => 30, rounds => $rounds },
-   'prepare8.dzn'  => { limit_s => 30, rounds => $rounds },
-   'prepare9.dzn'  => { limit_s => 30, rounds => $rounds },
-   'prepare10.dzn' => { limit_s => 30, rounds => $rounds },
-   'prepare11.dzn' => { limit_s => 30, rounds => $rounds },
-   'prepare12.dzn' => { limit_s => 30, rounds => $rounds },
-   'prepare13.dzn' => { limit_s => 30, rounds => $rounds },
-   'prepare14.dzn' => { limit_s => 30, rounds => $rounds }
+   'prepare1.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare2.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare3.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare4.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare5.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare6.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare7.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare8.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare9.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare10.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare11.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare12.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare13.dzn'  => { limit_s => $limit_s, rounds => $rounds },
+   'prepare14.dzn'  => { limit_s => $limit_s, rounds => $rounds }
 };
 
 
 # ---
-# Establish directory where our stuff is
+# Establish directory where our stuff is, relative to this executable.
 #
 #                $work_dir/
 #                    |
-#      +-------------+-----------------+-------------+--------------+
-#                    |                 |             |              |
-#                $data_dir/       $model_file     $log_dir/     $result_file
-#                    |                 |             |
-#              (contains the      (mzn file)   (accumulates
-#               @$data_files)                   process logs)
-
+#      +-------------+-----------------+-------------+-----------------+
+#      |             |                 |             |                 |
+#  prog.perl   $fq_data_dir/    $fq_model_file   $fq_log_dir/     $fq_result_file
+#                    |             (mzn file)        |              (CSV file)
+#                   / \                             / \
+#              (contains the                     (accumulates
+#               @$data_files)                  subprocess logs)
+#
 # ---
 
-my $home           = File::HomeDir->my_home;
-my $work_dir       = "$home/stats_collection";
+my $work_dir       = dirname($0); # this doesn't necessarily work, need to process a --work_dir=... arg
 my $fq_model_file  = "$work_dir/prepare_modded.mzn"; 
 my $fq_data_dir    = "$work_dir/data";
 my $fq_log_dir     = "$work_dir/log";

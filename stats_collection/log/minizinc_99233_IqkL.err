@@ -1,0 +1,6 @@
+% data         = prepare6.dzn
+% model        = prepare_modded.mzn
+% base         = prepare6
+% round        = 1
+% s_annotation = int_search(s, largest, indomain_median)
+% limit_s      = 30

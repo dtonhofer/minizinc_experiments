@@ -1,0 +1,31 @@
+% data         = prepare5.dzn
+% model        = prepare_modded.mzn
+% base         = prepare5
+% round        = 2
+% s_annotation = int_search(s, first_fail, indomain_reverse_split)
+% limit_s      = 30
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=154
+%%%mzn-stat: flatIntVars=73
+%%%mzn-stat: flatBoolConstraints=77
+%%%mzn-stat: flatIntConstraints=182
+%%%mzn-stat: evaluatedHalfReifiedConstraints=154
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.0663254
+%%%mzn-stat-end
+
+makespan = 39
+ 34   0  29  35   4  29  19  13  22   5  31  35  37  13  31 
+----------
+%%%mzn-stat: initTime=0.009854
+%%%mzn-stat: solveTime=4.4134
+%%%mzn-stat: solutions=39
+%%%mzn-stat: variables=227
+%%%mzn-stat: propagators=259
+%%%mzn-stat: propagations=4260538
+%%%mzn-stat: nodes=101447
+%%%mzn-stat: failures=50292
+%%%mzn-stat: restarts=0
+%%%mzn-stat: peakDepth=46
+%%%mzn-stat-end
