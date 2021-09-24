@@ -53,6 +53,37 @@ of data that might have taken a few hours to collect.
 The `result.txt` file found here is the result of running `collect_result.perl`
 on a 4-core Intel(R) Xeon(R) CPU W3520 @ 2.67GHz, Linux Fedora 33, 24 GiB RAM.
 
+## Info on search strategy annotations 
+
+See
+
+   - [MiniZinc manual: Search](https://www.minizinc.org/doc-2.5.5/en/mzn_search.html)
+   - [MiniZinc manual: Search annotations](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html?highlight=dom_w_deg#search-annotations) (complete list of currently available search annotations)
+
+### Variable selection strategy
+
+- *input_order*: choose in order from the array
+- *first_fail*: choose the variable with the smallest domain size
+- *anti_first_fail*: choose the variable with the largest domain
+- *smallest*: choose the variable with the smallest value in its domain
+- *largest*: choose the variable with the largest value in its domain
+- *occurrence*: choose the variable with the largest number of attached constraints
+- *most_constrained*: choose the variable with the smallest domain, breaking ties using the number of constraints
+- *max_regret*: choose the variable with the largest difference between the two smallest values in its domain.
+- *dom_w_deg*: choose the variable with the smallest value of domain size divided by weighted degree, which is the number of times it has been in a constraint that caused failure earlier in the search
+
+### Value selection strategy
+
+- *indomain_min*: assign the smallest value in the variable's domain
+- *indomain_max*: assign the largest value in the variable's domain
+- *indomain_middle*: assign the value in the variable’s domain closest to the mean of its current bounds
+- *indomain_median*: assign the middle value in the variable’s domain
+- *indomain*: nondeterministically assign values to the variable in ascending order
+- *indomain_random*: assign a random value from the variable’s domain
+- *indomain_split*: bisect the variable’s domain, excluding the upper half first.
+- *indomain_reverse_split*: bisect the variable’s domain, excluding the lower half first.
+- *indomain_interval*: if the variable’s domain consists of several contiguous intervals, reduce the domain to the first interval. Otherwise just split the variable’s domain.
+
 ## Bugs
 
 They probably exist.
