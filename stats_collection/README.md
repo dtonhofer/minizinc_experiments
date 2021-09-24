@@ -55,7 +55,7 @@ on a 4-core Intel(R) Xeon(R) CPU W3520 @ 2.67GHz, Linux Fedora 33, 24 GiB RAM.
 
 ## Bugs
 
-They probabyl exist.
+They probably exist.
 
 
 
