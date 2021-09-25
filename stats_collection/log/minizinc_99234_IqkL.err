@@ -1,6 +1,0 @@
-% data         = prepare5.dzn
-% model        = prepare_modded.mzn
-% base         = prepare5
-% round        = 2
-% s_annotation = int_search(s, first_fail, indomain_reverse_split)
-% limit_s      = 30

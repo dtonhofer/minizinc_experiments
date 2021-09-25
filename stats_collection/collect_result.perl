@@ -8,11 +8,34 @@ use File::Temp qw(tempfile tempdir);
 use File::Basename;
 use List::Util qw(min max);
 
-my $var_sels = [ 'input_order', 'first_fail', 'smallest', 'largest' ];
-my $val_sels = [ 'indomain_min', 'indomain_max', 'indomain_median', 'indomain_random', 'indomain_split', 'indomain_reverse_split' ];
+# Variable selection straegies as requested in the workshop
 
-my $rounds  = 4;     # how many rounds to do for each problem (so as to accumulate stats)
-my $limit_s = 30;    # processing time limit for optimization (in seconds) 
+my $var_sels = [ 
+    'input_order'
+   ,'first_fail' 
+   ,'smallest' 
+   ,'largest' 
+];
+
+# Value selection strategies as requested in the workshop
+
+my $val_sels = [ 
+    'indomain_min'
+   ,'indomain_max'
+   ,'indomain_median'
+   ,'indomain_random'
+   ,'indomain_split'
+   ,'indomain_reverse_split'
+];
+
+# How many rounds to do for each problem (so as to accumulate a few values)
+# This may enable us to add some error bars later.
+
+my $rounds = 5;
+
+# Processing time limit for optimization (in seconds) 
+
+my $limit_s = 60;
 
 # List the data files and for each, give a time limit in seconds and a number of rounds.
 # 0 rounds means don't run this.
