@@ -10,7 +10,7 @@ conclusion as to what's best.
 
 But why do it manually?
 
-We write a Perl program that runs MiniZinc with a slightly modified version of the model.
+We write a Perl program that runs MiniZinc (on the command line) with a slightly modified version of the model.
 The modified model uses a parameter for the annotation hinting at how to 
 select variables and values.
 
@@ -53,6 +53,34 @@ of data that might have taken a few hours to collect.
 The `result.txt` file found here is the result of running `collect_result.perl`
 on a 4-core Intel(R) Xeon(R) CPU W3520 @ 2.67GHz, Linux Fedora 33, 24 GiB RAM.
 
+## Fields in the output `result.txt`
+
+The file `result.txt` lists the info collected, one MiniZinc run per line.
+The performance values output by MiniZinc due to the `--statistics`  option are marked with _MZ_.
+
+Refer to [Statistics Output](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html#statistics-output) in the manual
+for the MiniZinc performance values.
+
+
+- `base`: The basename of parameter/config file.
+- `round`: The index of the "round" (starting from 0) if exactly the same problem is run several times.
+- `var_sel`: The setting for the "variable selection" strategy (in this case, applied to the sought schedule "start times", variables `s`).
+- `val_sel`: The setting for the "value selection" strategy (in this case, applied to the sought schedule "start times", variables `s`).
+- `limit_s`: Time limit given to MiniZinc in seconds; the best solution (in this case, shortest schedule solution) found within that limit counts.
+- `duration_s`: Time spent processing in seconds, as determined by the collection script.
+- `makespan`: Best overall duration of the schedule found. The smaller the better. If nothing was found, we write `NA`.
+- `init_time_s`: MZn: Time spent initializing in seconds. Can be disregarded, as it's always belwo 0.1s.
+- `solve_time_s`: MZn: Time spent solving in seconds. Cannot be larger than `limit_s`, but can be smaller.
+- `solutions`: MZn: Solutions found during optimization. If 0: It's a bust!
+- `variables`: MZn: Number of variables created from the problem statement. Varies from 71 to 2451 depending on problem.
+- `propagators`: MZn: Number of variables created from the problem statement. Varies from 78 to 2891 depending on problem.
+- `propagations`: MZn: Number of propagator invocations. Maximum observed value overall is 86 million.
+- `nodes`: MZn: Number of search nodes. Maximum observed value overall is 2 million. 
+- `failures`: MZn: Number of leaf nodes that were failed. Maximum observed value overall is above 1 million.
+- `restarts`: MZn: Number of times the solver restarted the search (jumped back to the root search node). Always 0.
+- `peak_depth`: MZn: Peak depth of search tree reached. `prepare14` reaches 1300 here.
+- `num_solutions`: MZn: The `nSolutions` value. It is 1 if a valid solution has been found, 0 if not. Never above 1.
+
 ## Info on search strategy annotations 
 
 See
@@ -62,34 +90,36 @@ See
 
 ### Variable selection strategy
 
-- *input_order*: choose in order from the array
-- *first_fail*: choose the variable with the smallest domain size
-- *anti_first_fail*: choose the variable with the largest domain
-- *smallest*: choose the variable with the smallest value in its domain
-- *largest*: choose the variable with the largest value in its domain
-- *occurrence*: choose the variable with the largest number of attached constraints
-- *most_constrained*: choose the variable with the smallest domain, breaking ties using the number of constraints
-- *max_regret*: choose the variable with the largest difference between the two smallest values in its domain.
-- *dom_w_deg*: choose the variable with the smallest value of domain size divided by weighted degree, which is the number of times it has been in a constraint that caused failure earlier in the search
+- `input_order`: choose in order from the array
+- `first_fail`: choose the variable with the smallest domain size
+- `anti_first_fail`: choose the variable with the largest domain
+- `smallest`: choose the variable with the smallest value in its domain
+- `largest`: choose the variable with the largest value in its domain
+- `occurrence`: choose the variable with the largest number of attached constraints
+- `most_constrained`: choose the variable with the smallest domain, breaking ties using the number of constraints
+- `max_regret`: choose the variable with the largest difference between the two smallest values in its domain.
+- `dom_w_deg`: choose the variable with the smallest value of domain size divided by weighted degree, which is the number of times it has been in a constraint that caused failure earlier in the search
 
 ### Value selection strategy
 
-- *indomain_min*: assign the smallest value in the variable's domain
-- *indomain_max*: assign the largest value in the variable's domain
-- *indomain_middle*: assign the value in the variable’s domain closest to the mean of its current bounds
-- *indomain_median*: assign the middle value in the variable’s domain
-- *indomain*: nondeterministically assign values to the variable in ascending order
-- *indomain_random*: assign a random value from the variable’s domain
-- *indomain_split*: bisect the variable’s domain, excluding the upper half first.
-- *indomain_reverse_split*: bisect the variable’s domain, excluding the lower half first.
-- *indomain_interval*: if the variable’s domain consists of several contiguous intervals, reduce the domain to the first interval. Otherwise just split the variable’s domain.
+- `indomain_min`: assign the smallest value in the variable's domain
+- `indomain_max`: assign the largest value in the variable's domain
+- `indomain_middle`: assign the value in the variable’s domain closest to the mean of its current bounds
+- `indomain_median`: assign the middle value in the variable’s domain
+- `indomain`: nondeterministically assign values to the variable in ascending order
+- `indomain_random`: assign a random value from the variable’s domain
+- `indomain_split`: bisect the variable’s domain, excluding the upper half first.
+- `indomain_reverse_split`: bisect the variable’s domain, excluding the lower half first.
+- `indomain_interval`: if the variable’s domain consists of several contiguous intervals, reduce the domain to the first interval. Otherwise just split the variable’s domain.
+
+## See also
+
+- [MiniZinc command line tool](https://www.minizinc.org/doc-2.5.5/en/command_line.html)
+- [CP Profiler](https://www.minizinc.org/doc-2.5.5/en/cpprofiler.html)
 
 ## Bugs
 
 They probably exist.
-
-
-
 
 
 
