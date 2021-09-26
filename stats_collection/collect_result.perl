@@ -7,6 +7,7 @@ use Fcntl qw(:flock SEEK_END);
 use File::Temp qw(tempfile tempdir);
 use File::Basename;
 use List::Util qw(min max);
+use POSIX;
 
 # Variable selection stratgies as requested in the workshop
 # (there are more in MiniZinc than listed here)
@@ -30,11 +31,15 @@ my $val_sels = [
    ,'indomain_reverse_split'
 ];
 
+# Whether the minizinc command line will be added to the log files
+
+my $write_cmdline = 1;
+
 # The variable about which we give a search hint (the "annotation")
 # Only one for now.
 
-my $ann_var  = "s";
-my $ann_name = "s_annotation"; # as it appears in the model file
+my $ann_var  = "s";            # the annotation covers variable "s"
+my $ann_name = "s_annotation"; # the name of the annotation in the model file
 
 # Unqualified model file ("mzn" file)
 
@@ -53,20 +58,20 @@ my $limit_s = 60;
 # 0 rounds means don't run this.
 
 my $data_files = {
-   'prepare1.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare2.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare3.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare4.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare5.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare6.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare7.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare8.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare9.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare10.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare11.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare12.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare13.dzn'  => { limit_s => $limit_s, rounds => $rounds },
-   'prepare14.dzn'  => { limit_s => $limit_s, rounds => $rounds }
+    'prepare1.dzn'   => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare2.dzn'   => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare3.dzn'   => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare4.dzn'   => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare5.dzn'   => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare6.dzn'   => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare7.dzn'   => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare8.dzn'   => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare9.dzn'   => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare10.dzn'  => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare11.dzn'  => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare12.dzn'  => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare13.dzn'  => { limit_s => $limit_s, rounds => $rounds }
+   ,'prepare14.dzn'  => { limit_s => $limit_s, rounds => $rounds }
 };
 
 
@@ -289,7 +294,7 @@ sub fork_minizinc {
    # https://perldoc.perl.org/functions/system
    #
 
-    my $cmd = [ 
+    my $cmdline = [ 
       "minizinc", 
       "--statistics", 
       "--solver"         , "Gecode", 
@@ -298,12 +303,15 @@ sub fork_minizinc {
       "--cmdline-data"   , "$ann_name = $ann_text"
    ];
 
-   my $limit_s = maybe_add_time_limit_parameter($cmd,$task);
+   my $limit_s = maybe_add_time_limit_parameter($cmdline,$task);
 
    write_header_comment($fh_out,$task,"$ann_name = $ann_text",$limit_s);
    write_header_comment($fh_err,$task,"$ann_name = $ann_text",$limit_s);
 
-   # print STDERR "Now starting:\n"; for my $str (@$cmd) { print "$str\n"; }
+   if ($write_cmdline) {
+      write_cmdline($fh_out,$cmdline);
+      write_cmdline($fh_err,$cmdline);
+   }
 
    #
    # Switch STDOUT and STDERR before starting the MiniZinc subprocess, so that the subprocess
@@ -319,7 +327,7 @@ sub fork_minizinc {
 
    ## >>>>>
    my $start  = time();
-   my $retval = system(@$cmd);
+   my $retval = system(@$cmdline);
    my $end    = time();
    ## <<<<<<
 
@@ -347,6 +355,7 @@ sub fork_minizinc {
 
 sub write_header_comment {
    my($fh,$task,$ann_desc,$limit_s) = @_;
+   print $fh "% now     = " . strftime("%F %T", localtime time) . "\n";
    print $fh "% data    = " . basename($$task{fq_data_file}) . "\n";
    print $fh "% model   = " . basename($$task{fq_model_file}) . "\n";
    print $fh "% base    = $$task{base}\n";
@@ -370,12 +379,27 @@ sub build_annotation {
    return "int_search($ann_var, $var_sel, $val_sel)"  # it's an integer search over $ann_var
 }
 
+sub write_cmdline {
+   my($fh,$cmdline) = @_;
+   print $fh "% minizinc";
+   for my $str (@$cmdline) { 
+      print $fh " ";
+      if ($str =~ /[\s\"]/) {  # an attempt at quoting
+         print $fh "'$str'";
+      }
+      else {
+         print $fh $str;
+      } 
+   }
+   print $fh "\n";
+}
+
 sub maybe_add_time_limit_parameter {
-   my($cmd,$task) = @_;
+   my($cmdline,$task) = @_;
    my $limit_s = $$task{limit_s};   
    if (defined($limit_s) && $limit_s > 0) {
       my $val = max(1000,$limit_s*1000);
-      push @$cmd, "--fzn-flags" , "--time $val";
+      push @$cmdline, "--fzn-flags" , "--time $val";
       return $limit_s
    }
    else {
