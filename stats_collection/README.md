@@ -66,7 +66,7 @@ The file `result.txt` lists the info collected, one MiniZinc run per line.
 - **`makespan`**: Best overall duration of the schedule found. The smaller the better. If nothing was found, we write `NA`, as is the custom in `R`.
 
 Next come performance values output by MiniZinc due to the `--statistics` option.
-Refer to [Statistics Output](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html#statistics-output) in the manua
+Refer to [Statistics Output](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html#statistics-output) in the manual
 
 - `init_time_s`: Time spent initializing in seconds. Can be disregarded, as it's always below 0.1s.
 - `solve_time_s`: Time spent solving in seconds. Cannot be larger than `limit_s`, but can be smaller.
