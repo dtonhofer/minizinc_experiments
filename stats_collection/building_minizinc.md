@@ -1,4 +1,4 @@
-# Building the MiniZinc compiler (`libminizinc`) itself 
+# Building the MiniZinc compiler/driver (`libminizinc`) itself 
 
 The manual has some description on how to build `libminizinc` on Linux:
 
