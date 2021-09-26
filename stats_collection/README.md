@@ -56,11 +56,6 @@ on a 4-core Intel(R) Xeon(R) CPU W3520 @ 2.67GHz, Linux Fedora 33, 24 GiB RAM.
 ## Fields in the output `result.txt`
 
 The file `result.txt` lists the info collected, one MiniZinc run per line.
-The performance values output by MiniZinc due to the `--statistics`  option are marked with _MZ_.
-
-Refer to [Statistics Output](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html#statistics-output) in the manual
-for the MiniZinc performance values.
-
 
 - `base`: The basename of parameter/config file.
 - `round`: The index of the "round" (starting from 0) if exactly the same problem is run several times.
@@ -68,18 +63,22 @@ for the MiniZinc performance values.
 - `val_sel`: The setting for the "value selection" strategy (in this case, applied to the sought schedule "start times", variables `s`).
 - `limit_s`: Time limit given to MiniZinc in seconds; the best solution (in this case, shortest schedule solution) found within that limit counts.
 - `duration_s`: Time spent processing in seconds, as determined by the collection script.
-- `makespan`: Best overall duration of the schedule found. The smaller the better. If nothing was found, we write `NA`.
-- `init_time_s`: MZn: Time spent initializing in seconds. Can be disregarded, as it's always belwo 0.1s.
-- `solve_time_s`: MZn: Time spent solving in seconds. Cannot be larger than `limit_s`, but can be smaller.
-- `solutions`: MZn: Solutions found during optimization. If 0: It's a bust!
-- `variables`: MZn: Number of variables created from the problem statement. Varies from 71 to 2451 depending on problem.
-- `propagators`: MZn: Number of variables created from the problem statement. Varies from 78 to 2891 depending on problem.
-- `propagations`: MZn: Number of propagator invocations. Maximum observed value overall is 86 million.
-- `nodes`: MZn: Number of search nodes. Maximum observed value overall is 2 million. 
-- `failures`: MZn: Number of leaf nodes that were failed. Maximum observed value overall is above 1 million.
-- `restarts`: MZn: Number of times the solver restarted the search (jumped back to the root search node). Always 0.
-- `peak_depth`: MZn: Peak depth of search tree reached. `prepare14` reaches 1300 here.
-- `num_solutions`: MZn: The `nSolutions` value. It is 1 if a valid solution has been found, 0 if not. Never above 1.
+- **`makespan`**: Best overall duration of the schedule found. The smaller the better. If nothing was found, we write `NA`, as is the custom in `R`.
+
+Next come performance values output by MiniZinc due to the `--statistics` option.
+Refer to [Statistics Output](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html#statistics-output) in the manua
+
+- `init_time_s`: Time spent initializing in seconds. Can be disregarded, as it's always below 0.1s.
+- `solve_time_s`: Time spent solving in seconds. Cannot be larger than `limit_s`, but can be smaller.
+- `solutions`: Solutions found during optimization. If this is 0, it's a bust!
+- `variables`: Number of variables created from the problem statement. (Here, varies from 71 to 2451 depending on problem.)
+- `propagators`: Number of variables created from the problem statement. (Here, varies from 78 to 2891 depending on problem.)
+- `propagations`: Number of propagator invocations. (Here, maximum observed value overall is 86 million.)
+- `nodes`: Number of search nodes. (Here, maximum observed value overall is 2 million.) 
+- `failures`: Number of leaf nodes that were failed. (Here, maximum observed value overall is above 1 million.)
+- `restarts`: Number of times the solver restarted the search (jumped back to the root search node). (Here, always 0.)
+- `peak_depth`: Peak depth of search tree reached. (Here, `prepare14` reaches 1300.)
+- `num_solutions`: The `nSolutions` value, this should be the "number of solutions output". It think.
 
 ## Info on search strategy annotations 
 
