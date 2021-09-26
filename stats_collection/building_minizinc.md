@@ -257,7 +257,7 @@ Then rebuild the loader cache by running
 # ldconfig
 ```
 
-## Make `gecode` visible to `minizinc`
+## Make `gecode` visible to `libminizinc`
 
 The gecode solver is not yet visible!
 
@@ -336,7 +336,7 @@ Here is a remark that I did not have to act on, but good to know:
 > to the MZN_SOLVER_PATH environment variable if the solvers haven't been 
 > installed in the same place as MiniZinc."
 
-## Make `chuffed` visible to `minizinc`
+## Make `chuffed` visible to `libminizinc`
 
 There is a `chuffed.msc` file in the chuffed installation:
 
