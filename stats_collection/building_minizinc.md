@@ -337,3 +337,73 @@ Here is a remark that I did not have to act on, but good to know:
 > installed in the same place as MiniZinc."
 
 ## Make `chuffed` visible to `minizinc`
+
+There is a `chuffed.msc` file in the chuffed installation:
+
+```
+/usr/local/minizinc/chuffed/chuffed.msc
+```
+
+Just switch to `root` and copy that file into the `libminizinc` filetree:
+
+```
+# MZN=/usr/local/minizinc
+# cd $MZN/libminizinc/share/minizinc/solvers
+# cp $MZN/chuffed/chuffed.msc .
+```
+
+Now `libminizinc` knows about the `chuffed` solver:
+
+```
+$ minizinc --solvers
+MiniZinc driver.
+Available solver configurations:
+  Chuffed 0.10.4 (org.chuffed.chuffed, cp, lcg, int)
+  Gecode 6.2.0 (org.gecode.gecode, default solver, cp, int, float, set, restart)
+Search path for solver configurations:
+  /usr/local/minizinc/libminizinc/share/minizinc/solvers
+  /usr/local/share/minizinc/solvers
+  /usr/share/minizinc/solvers
+```
+
+## Running tests
+
+See https://github.com/MiniZinc/libminizinc/tree/master/tests
+
+> The correctness of the MiniZinc compiler is tested using a PyTest test suite.
+
+Make sure you aren't `root` when running the tests.
+ 
+First, cd to the tests directory of the distribution:
+
+```
+$ cd tests
+```
+
+Get the Python stuff you need:
+
+```
+$ pip install -r requirements.txt
+```
+
+This will install required Python packages.
+
+Now run the tests:
+
+```
+$ pytest --solvers gecode,chuffed --driver /usr/local/minizinc/libminizinc/bin
+```
+
+With the "master" branch, this actually terminates mostly in Python errors of this kind:
+
+```
+TypeError: argument of type 'NoneType' is not iterable
+```
+
+With the "develop" branch, thinks are looking a bit up:
+
+```
+14 failed, 401 passed, 608 skipped, 4 warnings in 90.66s (0:01:30)
+```
+
+This needs some work!
