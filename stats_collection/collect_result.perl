@@ -8,7 +8,8 @@ use File::Temp qw(tempfile tempdir);
 use File::Basename;
 use List::Util qw(min max);
 
-# Variable selection straegies as requested in the workshop
+# Variable selection stratgies as requested in the workshop
+# (there are more in MiniZinc than listed here)
 
 my $var_sels = [ 
     'input_order'
@@ -18,6 +19,7 @@ my $var_sels = [
 ];
 
 # Value selection strategies as requested in the workshop
+# (there are more in MiniZinc than listed here)
 
 my $val_sels = [ 
     'indomain_min'
@@ -27,6 +29,16 @@ my $val_sels = [
    ,'indomain_split'
    ,'indomain_reverse_split'
 ];
+
+# The variable about which we give a search hint (the "annotation")
+# Only one for now.
+
+my $ann_var  = "s";
+my $ann_name = "s_annotation"; # as it appears in the model file
+
+# Unqualified model file ("mzn" file)
+
+my $model_file = "prepare_modded.mzn";
 
 # How many rounds to do for each problem (so as to accumulate a few values)
 # This may enable us to add some error bars later.
@@ -74,7 +86,7 @@ my $data_files = {
 # ---
 
 my $work_dir       = dirname($0); # this doesn't necessarily work, need to process a --work_dir=... arg
-my $fq_model_file  = "$work_dir/prepare_modded.mzn"; 
+my $fq_model_file  = "$work_dir/$model_file"; 
 my $fq_data_dir    = "$work_dir/data";
 my $fq_log_dir     = "$work_dir/log";
 my $fq_result_file = "$work_dir/result.txt";
@@ -257,7 +269,7 @@ sub fork_minizinc {
    my $fq_result_file = $$task{fq_result_file};  die "Result file '$fq_result_file' does not exist" unless -e $fq_result_file;
    my $base           = $$task{base};            die "Base is unset" unless $base;   # For naming the result line
    my $round          = $$task{round};           die "Round is unset" unless defined $round; # For naming the result line
-   my $s_annotation   = build_search_annotation_for_s($task);
+   my $ann_text       = build_annotation($task); # the annotation text to be injected into the model
 
    #
    # MiniZinc shall write its temporary files (one for stdout and another for stderr)
@@ -283,13 +295,13 @@ sub fork_minizinc {
       "--solver"         , "Gecode", 
       "--model"          , $fq_model_file,
       "--data"           , $fq_data_file,
-      "--cmdline-data"   , "s_annotation = $s_annotation"
+      "--cmdline-data"   , "$ann_name = $ann_text"
    ];
 
    my $limit_s = maybe_add_time_limit_parameter($cmd,$task);
 
-   write_header($fh_out,$task,$s_annotation,$limit_s);
-   write_header($fh_err,$task,$s_annotation,$limit_s);
+   write_header_comment($fh_out,$task,"$ann_name = $ann_text",$limit_s);
+   write_header_comment($fh_err,$task,"$ann_name = $ann_text",$limit_s);
 
    # print STDERR "Now starting:\n"; for my $str (@$cmd) { print "$str\n"; }
 
@@ -333,26 +345,29 @@ sub fork_minizinc {
    unlink $filename_err || die "Could not unlink '$filename_err'";
 }
 
-sub write_header {
-   my($fh,$task,$s_annotation,$limit_s) = @_;
-   print $fh "% data         = " . basename($$task{fq_data_file}) . "\n";
-   print $fh "% model        = " . basename($$task{fq_model_file}) . "\n";
-   print $fh "% base         = $$task{base}\n";
-   print $fh "% round        = $$task{round}\n";
-   print $fh "% s_annotation = $s_annotation\n";
-   print $fh "% limit_s      = $limit_s\n";
+sub write_header_comment {
+   my($fh,$task,$ann_desc,$limit_s) = @_;
+   print $fh "% data    = " . basename($$task{fq_data_file}) . "\n";
+   print $fh "% model   = " . basename($$task{fq_model_file}) . "\n";
+   print $fh "% base    = $$task{base}\n";
+   print $fh "% round   = $$task{round}\n";
+   print $fh "% limit_s = $limit_s\n";
+   print $fh "% $ann_desc\n";
 }
 
-# The "search annotation"s apply to variable "s" (start values) only.
-# Assume that if missing, the corresponding defaults apply.
+# Build the (for now) only annotation (this is of course semi-hardcoded)
+# Assume that search/selection strategy values are missing,
+# the corresponding defaults apply (MiniZinc has not 'default'
+# value, I suppose 'input_order' and 'indomain_main' are the
+# defaults)
 
-sub build_search_annotation_for_s {
+sub build_annotation {
    my($task) = @_;
    my $var_sel = $$task{var_sel}; 
    my $val_sel = $$task{val_sel}; 
-   if (!$var_sel) { $var_sel = 'input_order' }   # a default
-   if (!$val_sel) { $val_sel = 'indomain_main' } # a default
-   return "int_search(s, $var_sel, $val_sel)"
+   if (!$var_sel) { $var_sel = 'input_order' }        # a default
+   if (!$val_sel) { $val_sel = 'indomain_main' }      # a default
+   return "int_search($ann_var, $var_sel, $val_sel)"  # it's an integer search over $ann_var
 }
 
 sub maybe_add_time_limit_parameter {
