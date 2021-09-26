@@ -185,6 +185,24 @@ Now compile:
 $ cmake --build .
 ```
 
+Eventually you will see:
+
+```
+[ 91%] Building CXX object CMakeFiles/mzn.dir/lib/type.cpp.o
+[ 92%] Building CXX object CMakeFiles/mzn.dir/lib/typecheck.cpp.o
+[ 93%] Building CXX object CMakeFiles/mzn.dir/lib/values.cpp.o
+[ 95%] Linking CXX static library libmzn.a
+[ 95%] Built target mzn
+Scanning dependencies of target minizinc
+[ 96%] Building CXX object CMakeFiles/minizinc.dir/minizinc.cpp.o
+[ 97%] Linking CXX executable minizinc
+[ 97%] Built target minizinc
+Scanning dependencies of target mzn2doc
+[ 98%] Building CXX object CMakeFiles/mzn2doc.dir/mzn2doc.cpp.o
+[100%] Linking CXX executable mzn2doc
+[100%] Built target mzn2doc
+```
+
 ## Installing
 
 As `root`, cd to the `build` directory and then run:
