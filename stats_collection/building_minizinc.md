@@ -22,6 +22,21 @@ In that README, MiniZinc team recommends you use the binary packages here: https
 
 Note that we have compiled `gecode` and `chuffed` already at this point, so we can use `gecode` during compilation of `libminizinc`.
 
+The installation uses [_CMake_](https://en.wikipedia.org/wiki/CMake) to create the actual makefiles, so you need to have that on your system.
+
+_CMake_'s [User Interaction Guide](https://cmake.org/cmake/help/latest/guide/user-interaction/index.html) can provide
+you with a quick introduction to compiling _CMake_ projects.
+
+Make sure you have what's needed. Commands differ between systems:
+
+```
+$ rpm --query cmake bison flex gcc-c++
+cmake-3.19.7-1.fc33.x86_64
+bison-3.6.4-3.fc33.x86_64
+flex-2.6.4-5.fc33.x86_64
+gcc-c++-10.3.1-1.fc33.x86_64
+```
+
 ## Getting _libminizinc_
 
 It is here: https://github.com/MiniZinc/libminizinc
@@ -64,7 +79,7 @@ libminizinc/
 Thus
 
 ```
-cd libminizinc
+$ cd libminizinc/
 ```
 
 List git repository branches
@@ -88,7 +103,7 @@ master
 
 Yes, master!
 
-Switch branch to `develop` to get latest fixes (but you probably want to skip this to stay on `master`):
+If you want to switch branch to `develop` to get latest fixes (but you probably want to skip this to stay on `master`):
 
 ```
 $ git checkout develop
@@ -100,34 +115,31 @@ Check the log of the currently check-out branch:
 
 ```
 $ git log
-commit bbefcea214fec798a0f5acc442581984555acd21 (HEAD -> develop, origin/develop)
-Author: Mikael Zayenz Lagerkvist <lagerkvist@gecode.org>
-Date:   Fri May 14 16:13:20 2021 +0200
- 
-    Fix FlatZinc posting for element constraints
+commit 0848ce7ec78d3051cbe0f9e558af3c9dcfe65606 (HEAD -> master, tag: 2.5.5, origin/master, origin/HEAD)
+Author: Jason N <admin@cyderize.org>
+Date:   Fri Mar 19 14:11:01 2021 +1100
+
+    Add changelog for 2.5.5
 ```
 
 Check whether any files have changed. In the example below, I have switched to branch `develop` beforehand:
 
 ```
 $ git status
-On branch develop
-Your branch is up to date with 'origin/develop'.
+On branch master
+Your branch is up to date with 'origin/master'.
+
+nothing to commit, working tree clean
 ```
 
-`origin/develop` is the remote branch (branch `develop` on the remote `origin`), `develop` is a local branch.
+`origin/master` is the remote branch (branch `master` on the remote `origin`), branch `master` is a local branch.
 
 ## Compiling
-
-The installation uses [_CMake_](https://en.wikipedia.org/wiki/CMake) to create the actual makefiles, so you need to have that on your system.
 
 The [README.md]( https://github.com/MiniZinc/libminizinc/blob/master/README.md) says:
 
 ```
-The MiniZinc compiler is compiled as a CMake project. CMake's [User Interaction
-Guide](https://cmake.org/cmake/help/latest/guide/user-interaction/index.html)
-can provide you with a quick introduction to compiling CMake projects. The
-following CMake variables can be used in the MiniZinc project to instruct the
+The following CMake variables can be used in the MiniZinc project to instruct the
 compilation behaviour:
  
 | Variable                                     | Default | Description                                                 |
@@ -153,12 +165,16 @@ The manual says:
 > installation, Gecode either has to be in the default location (such as /usr/local/include etc.), or you
 > have to use the option -DGECODE_ROOT= when calling cmake.
 
+As said, we have `gecode` in `$MZN/gecode/` and want `libminizinc` 
+to go to `$MZN/libminizinc`.
+
 ```
 $ cd libminizinc # you should already be in that directory
 $ mkdir build
 $ cd build
-$ export Gecode_ROOT=/usr/local/minizinc/gecode/
-$ cmake -DCMAKE_INSTALL_PREFIX=/usr/local/minizinc/libminizinc -DCMAKE_BUILD_TYPE=Release ..
+$ MZN=/usr/local/minizinc
+$ export Gecode_ROOT=$MZN/gecode/
+$ cmake -DCMAKE_INSTALL_PREFIX=$MZN/libminizinc -DCMAKE_BUILD_TYPE=Release ..
 ```
 
 Note the output, check it for interesting messages.
@@ -169,3 +185,155 @@ Now compile:
 $ cmake --build .
 ```
 
+## Installing
+
+As `root`, cd to the `build` directory and then run:
+
+```
+# cmake --build . --target install
+```
+
+A tree appears at the configured location:
+
+```
+# tree -L 2 /usr/local/minizinc/libminizinc/
+/usr/local/minizinc/libminizinc/
+├── bin
+│   ├── minizinc  (executable)
+│   └── mzn2doc   (executable)
+├── include
+│   └── minizinc
+├── lib64
+│   ├── cmake
+│   └── libmzn.a
+└── share
+    └── minizinc
+```
+
+Extend the `PATH` as configured in `.bashrc` so that the `minizinc` executable can be found. In my case:
+
+```
+PATH="$PATH:/usr/local/minizinc/libminizinc/bin"
+```
+
+## Verify
+
+Let's see the solvers that minizinc knows about!
+
+Drop root privileges, then:
+
+```
+$  minizinc --help
+minizinc: error while loading shared libraries: libgecodedriver.so.49: cannot open shared object file: No such file or directory
+```
+
+Evidently the gecode library is not being found.
+
+This can be solved by extending `LD_LIBRARY_PATH` (but this is just a temporary solution)
+
+```
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/minizinc/gecode/lib/
+$ minizinc --solvers
+MiniZinc driver.
+Available solver configurations:
+  none.
+Search path for solver configurations:
+  /usr/local/minizinc/libminizinc/share/minizinc/solvers
+  /usr/local/share/minizinc/solvers
+  /usr/share/minizinc/solvers
+```
+
+For a permanent solution, switch to `root`, then:
+
+Add the file `minizinc.conf` to directory `/etc/ld.so.conf.d`. That file simply contains the name of the directory with the `minizinc` object files:
+
+```
+/usr/local/minizinc/gecode/lib/
+```
+
+Then rebuild the loader cache by running
+
+```
+# ldconfig
+```
+
+## Make `gecode` visible to `minizinc`
+
+The gecode solver is not yet visible!
+
+```
+$  minizinc --solver gecode
+Config exception: no solver with tag gecode found
+minizinc: MiniZinc driver.
+Usage: minizinc  [<options>] [-I <include path>] <model>.mzn [<data>.dzn ...] or just <flat>.fzn
+More info with "minizinc --help"
+```
+
+The manual says:
+
+> In order to use Gecode as a solver with MiniZinc (as opposed to an internal
+> pre-solving tool), you have to create an appropriate solver configuration file.
+>
+> Add a file gecode.msc in an appropriate location (see [Solver Configuration Files](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html#sec-cmdline-conffiles)) 
+> containing the following, where you replace with the actual installation path and
+> update the version number if necessary:
+
+So here is the updated JSON file
+
+```
+{
+ "id": "org.gecode.gecode",
+ "name": "Gecode",
+ "description": "Gecode FlatZinc executable",
+ "version": "6.2.0",
+ "mznlib": "/usr/local/minizinc/gecode/share/gecode/mznlib/",
+ "executable": "/usr/local/minizinc/gecode/bin/fzn-gecode",
+ "tags": ["cp","int", "float", "set", "restart"],
+ "stdFlags": ["-a","-f","-n","-p","-r","-s","-t"],
+ "supportsMzn": false,
+ "supportsFzn": true,
+ "needsSolns2Out": true,
+ "needsMznExecutable": false,
+ "needsStdlibDir": false,
+ "isGUIApplication": false
+}
+```
+
+The above file goes to directory (MZN is our MiniZinc installation directory):
+
+```
+MZN=/usr/local/minizinc
+$MZN/libminizinc/share/minizinc/solvers
+```
+
+N.B. It is under directory `share` **not** under `include`.
+
+The directory may not exist at first. Thus:
+
+```
+$ MZN=/usr/local/minizinc
+$ mkdir $MZN/libminizinc/share/minizinc/solvers
+```
+
+Now add the above JSON as a file `gecode.msc`.
+
+Once that has been done, `gecode` is visible to `minizinc`:
+
+``` 
+$ minizinc --solvers
+MiniZinc driver.
+Available solver configurations:
+  Gecode 6.2.0 (org.gecode.gecode, default solver, cp, int, float, set, restart)
+Search path for solver configurations:
+  /usr/local/minizinc/libminizinc/share/minizinc/solvers
+  /usr/local/share/minizinc/solvers
+  /usr/share/minizinc/solvers
+``` 
+
+Here is a remark that I did not have to act on, but good to know:
+
+> You may have to add <YOUR_SOLVER_INSTALL_PREFIX>/share/minizinc/solvers/ 
+> to the MZN_SOLVER_PATH environment variable if the solvers haven't been 
+> installed in the same place as MiniZinc."
+
+## Make `chuffed` visible to `minizinc`
