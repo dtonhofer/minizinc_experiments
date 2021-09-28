@@ -116,6 +116,15 @@ See
 - [MiniZinc command line tool](https://www.minizinc.org/doc-2.5.5/en/command_line.html)
 - [CP Profiler](https://www.minizinc.org/doc-2.5.5/en/cpprofiler.html)
 
+## Python interface
+
+Jip J. Dekker says: 
+
+> We have a [MiniZinc Python interface](https://minizinc-python.readthedocs.io/en/latest/),
+> that should make interacting with MiniZinc from script a lot easier 
+> (including the collection of statistics). We even have a MiniZinc benchmarking tool, but this 
+> is mainly aimed at clusters running [Slurm](https://slurm.schedmd.com/overview.html) at the moment.
+
 ## Bugs
 
 They probably exist.
