@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+# Homepage for this script is at
+# https://github.com/dtonhofer/minizinc_experiments/tree/main/stats_collection
+
 use warnings;
 use strict;
 
@@ -12,17 +15,18 @@ use POSIX;
 # Variable selection stratgies as requested in the workshop
 # (there are more in MiniZinc than listed here)
 
-my $var_sels = [ 
+my $var_sels = [
     'input_order'
-   ,'first_fail' 
-   ,'smallest' 
-   ,'largest' 
+   ,'first_fail'
+   ,'smallest'
+   ,'largest'
+#  ,'most_constrained'
 ];
 
 # Value selection strategies as requested in the workshop
 # (there are more in MiniZinc than listed here)
 
-my $val_sels = [ 
+my $val_sels = [
     'indomain_min'
    ,'indomain_max'
    ,'indomain_median'
@@ -35,22 +39,44 @@ my $val_sels = [
 
 my $write_cmdline = 1;
 
+# ------------
+
 # The variable about which we give a search hint (the "annotation")
 # Only one for now.
 
 my $ann_var  = "s";            # the annotation covers variable "s"
 my $ann_name = "s_annotation"; # the name of the annotation in the model file
 
+# Build the (for now) only annotation (this is of course semi-hardcoded)
+# Assume that if search/selection strategy values are missing in the %$task
+# hash, the corresponding defaults apply (MiniZinc has not 'default'
+# value, I suppose 'input_order' and 'indomain_main' are the defaults)
+
+sub build_annotation {
+   my($task) = @_;
+   my $var_sel = $$task{var_sel};
+   my $val_sel = $$task{val_sel};
+   if (!$var_sel) { $var_sel = 'input_order' }        # a default
+   if (!$val_sel) { $val_sel = 'indomain_main' }      # a default
+   return "int_search($ann_var, $var_sel, $val_sel)"  # it's an integer search over $ann_var
+}
+
+# ------------
+
 # Unqualified model file ("mzn" file)
 
 my $model_file = "prepare_modded.mzn";
+
+# We are looking for this value in the minizinc output (a numeric scalar)
+
+my $optval_key = "makespan";
 
 # How many rounds to do for each problem (so as to accumulate a few values)
 # This may enable us to add some error bars later.
 
 my $rounds = 5;
 
-# Processing time limit for optimization (in seconds) 
+# Processing time limit for optimization (in seconds)
 
 my $limit_s = 60;
 
@@ -91,7 +117,7 @@ my $data_files = {
 # ---
 
 my $work_dir       = dirname($0); # this doesn't necessarily work, need to process a --work_dir=... arg
-my $fq_model_file  = "$work_dir/$model_file"; 
+my $fq_model_file  = "$work_dir/$model_file";
 my $fq_data_dir    = "$work_dir/data";
 my $fq_log_dir     = "$work_dir/log";
 my $fq_result_file = "$work_dir/result.txt";
@@ -143,7 +169,7 @@ sub fill_task_queue {
 sub fill_task_queue_for_file {
    my($fq_data_file,$data_file,$base) = @_;
    my $sub_hash = $$data_files{$data_file};
-   my $rounds   = $$sub_hash{rounds}; die "Bad 'rounds' for '$data_file'" unless (defined($rounds) && $rounds >= 0); 
+   my $rounds   = $$sub_hash{rounds}; die "Bad 'rounds' for '$data_file'" unless (defined($rounds) && $rounds >= 0);
    for (my $round = 0; $round < $rounds; $round++) {
       for my $var_sel (@$var_sels) {
          for my $val_sel (@$val_sels) {
@@ -178,24 +204,31 @@ print STDERR "There are " . scalar(@$task_queue) . " entries in the task queue!\
 
 sub touch_result_file {
    open(my $fh,">",$fq_result_file) or die "Could not open file '$fq_result_file' for output: $!";
-   print $fh "base";
-   print $fh ", round";
-   print $fh ", var_sel"; 
-   print $fh ", val_sel";
-   print $fh ", limit_s";
-   print $fh ", duration_s";
-   print $fh ", makespan";
-   print $fh ", init_time_s";
-   print $fh ", solve_time_s"; 
-   print $fh ", solutions";
-   print $fh ", variables";
-   print $fh ", propagators";
-   print $fh ", propagations";
-   print $fh ", nodes";
-   print $fh ", failures";
-   print $fh ", restarts";
-   print $fh ", peak_depth";
-   print $fh ", num_solutions\n";
+
+   print $fh "base";                # The basename of parameter/config file.
+   print $fh ", round";             # The index of the "round" (starting from 0) if exactly the same problem is run several times.
+   print $fh ", var_sel";           # The setting for the "variable selection" strategy (in this case, applied to the sought schedule "start times", variables s).
+   print $fh ", val_sel";           # The setting for the "value selection" strategy (in this case, applied to the sought schedule "start times", variables s).
+   print $fh ", limit_s";           # Time limit given to MiniZinc in seconds; the best solution (in this case, shortest schedule solution) found within that limit counts.
+   print $fh ", duration_s";        # Time spent processing in seconds, as determined by the collection script.
+   print $fh ", $optval_key";       # Best value found (problem-dependent numeric scalar). If nothing was found, we write "NA" (as is the custom in "R")
+
+   # The following have been parsed from MiniZinc statistics output.
+   # Refer to https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html#statistics-output for the MiniZinc performance values.
+
+   print $fh ", init_time_s";       # Time spent initializing in seconds.
+   print $fh ", solve_time_s";      # Time spent solving in seconds. Cannot be larger than "limit_s", but can be smaller.
+   print $fh ", solutions";         # Number of solutions found during optimization. If this is 0, it's a bust!
+   print $fh ", variables";         # Number of variables created from the problem statement.
+   print $fh ", propagators";       # Number of variables created from the problem statement.
+   print $fh ", propagations";      # Number of propagator invocations.
+   print $fh ", nodes";             # Number of search nodes.
+   print $fh ", failures";          # Number of leaf nodes that were failed.
+   print $fh ", restarts";          # Number of times the solver restarted the search (jumped back to the root search node).
+   print $fh ", peak_depth";        # Peak depth of search tree reached.
+   print $fh ". num_solutions";     # The nSolutions value, this should be the "number of solutions output". It think.
+
+   print $fh "\n";
    close($fh) or die "Could not close file '$fq_result_file': $!";
 }
 
@@ -212,7 +245,7 @@ sub main_loop {
       print "Submitting work. There are now " . scalar(@$task_queue) . " entries left in the task queue.\n";
       ## >>>
       fork_child_process($task)
-      ## <<< 
+      ## <<<
    }
 }
 
@@ -294,10 +327,10 @@ sub fork_minizinc {
    # https://perldoc.perl.org/functions/system
    #
 
-    my $cmdline = [ 
-      "minizinc", 
-      "--statistics", 
-      "--solver"         , "Gecode", 
+    my $cmdline = [
+      "minizinc",
+      "--statistics",
+      "--solver"         , "Gecode",
       "--model"          , $fq_model_file,
       "--data"           , $fq_data_file,
       "--cmdline-data"   , "$ann_name = $ann_text"
@@ -340,7 +373,7 @@ sub fork_minizinc {
    process_system_retval_and_maybe_exit($retval);
 
    my $mzn_res = extract_minizinc_solution_and_stats($filename_out);
- 
+
    my $result = { duration_s => $end-$start , limit_s => $limit_s , minizinc => $mzn_res };
 
    write_to_result_file($task,$result);
@@ -364,42 +397,37 @@ sub write_header_comment {
    print $fh "% $ann_desc\n";
 }
 
-# Build the (for now) only annotation (this is of course semi-hardcoded)
-# Assume that search/selection strategy values are missing,
-# the corresponding defaults apply (MiniZinc has not 'default'
-# value, I suppose 'input_order' and 'indomain_main' are the
-# defaults)
-
-sub build_annotation {
-   my($task) = @_;
-   my $var_sel = $$task{var_sel}; 
-   my $val_sel = $$task{val_sel}; 
-   if (!$var_sel) { $var_sel = 'input_order' }        # a default
-   if (!$val_sel) { $val_sel = 'indomain_main' }      # a default
-   return "int_search($ann_var, $var_sel, $val_sel)"  # it's an integer search over $ann_var
-}
-
 sub write_cmdline {
    my($fh,$cmdline) = @_;
    print $fh "% minizinc";
-   for my $str (@$cmdline) { 
+   for my $str (@$cmdline) {
       print $fh " ";
       if ($str =~ /[\s\"]/) {  # an attempt at quoting
          print $fh "'$str'";
       }
       else {
          print $fh $str;
-      } 
+      }
    }
    print $fh "\n";
 }
 
+# Jip J. Dekker says:
+# "The --fznflags MiniZinc flag is used to pass flags directly to the solver,
+#  in newer versions of MiniZinc this is not necessary anymore. Instead for
+#  solvers that have a correct configuration you can just use the flags directly."
+#
+# In this case, "--time" (also written as "-time") is "cutoff for time in
+# milliseconds". See page 198 of the PDF manual for Gecode, "Modeling and
+# Programming with Gecode", available here:
+# https://www.gecode.org/doc/6.2.0/reference/index.html
+
 sub maybe_add_time_limit_parameter {
    my($cmdline,$task) = @_;
-   my $limit_s = $$task{limit_s};   
+   my $limit_s = $$task{limit_s};
    if (defined($limit_s) && $limit_s > 0) {
-      my $val = max(1000,$limit_s*1000);
-      push @$cmdline, "--fzn-flags" , "--time $val";
+      my $val_ms = max(1000,$limit_s*1000);
+      push @$cmdline, "--fzn-flags" , "--time $val_ms";
       return $limit_s
    }
    else {
@@ -411,7 +439,7 @@ sub process_system_retval_and_maybe_exit {
    my($retval) = @_;
    if ($retval == -1) {
       print STDERR "Failed to execute MiniZinc: $!\n";
-      exit 1 
+      exit 1
    }
    elsif ($retval & 127) {
       my $sigval = ($retval & 127);
@@ -419,8 +447,8 @@ sub process_system_retval_and_maybe_exit {
       exit 1
    }
    else {
-      my $exitval = ($retval >> 8); 
-      if ($exitval > 0) {         
+      my $exitval = ($retval >> 8);
+      if ($exitval > 0) {
          printf STDERR "MiniZinc exited with value $exitval\n";
          exit 1
       }
@@ -436,8 +464,8 @@ sub write_to_result_file {
    my $fq_result_file = $$task{fq_result_file};
    my $limit_s        = $$result{limit_s};
    my $duration_s     = $$result{duration_s};
-   my $sequence       = $$result{minizinc}{solution}{sequence}; # a hash
-   my $makespan       = $$result{minizinc}{solution}{makespan}; # a number
+   # my $sequence       = $$result{minizinc}{solution}{sequence}; # a hash
+   my $optval_val     = $$result{minizinc}{solution}{$optval_key}; # a number
    my $init_time_s    = $$result{minizinc}{init_time_s};
    my $solve_time_s   = $$result{minizinc}{solve_time_s};
    my $solutions      = $$result{minizinc}{solutions};
@@ -459,12 +487,12 @@ sub write_to_result_file {
    printf $fh ", %25s"   , $val_sel;
    printf $fh ", %5d"    , $limit_s;
    printf $fh ", %5d"    , $duration_s;
-   if (defined($makespan)) {
-      printf $fh ", %4d"  , $makespan
+   if (defined($optval_val)) {
+      printf $fh ", %4d"  , $optval_val
    }
    else {
       printf $fh ",   NA"
-   } 
+   }
    printf $fh ", %6.2f", $init_time_s;
    printf $fh ", %6.2f", $solve_time_s;
    printf $fh ", %4d"  , $solutions;
@@ -510,6 +538,8 @@ sub extract_sequence_of_start_times {
    return $res
 }
 
+# Solution data will be stored in a subhash under "solution", MiniZinc performance
+# data will be stored directly in the "res" hash.
 
 sub extract_minizinc_solution_and_stats {
    my($fq_file) = @_;
@@ -526,8 +556,10 @@ sub extract_minizinc_solution_and_stats {
          $expect_sequence = 0;
       }
       else {
-         if ($line =~ /^makespan\s*=\s*(\d+)\s*$/) {
-            $$res{solution}{makespan} = $1*1;
+         if ($line =~ /^\s*${optval_key}\s*=\s*([\d\.]+)\s*;?\s*$/) {
+            my $numeric = $1*1;
+            # print STDERR "Found $optval_key = $1 in '$line'; numeric: $numeric\n";
+            $$res{solution}{$optval_key} = $numeric;
             $expect_sequence = 1;
             next
          }
