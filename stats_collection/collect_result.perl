@@ -3,6 +3,14 @@
 # Homepage for this script is at
 # https://github.com/dtonhofer/minizinc_experiments/tree/main/stats_collection
 
+# See the MiniZinc manual for annotations and search at:
+#
+# https://www.minizinc.org/doc-2.5.5/en/mzn_search.html
+#
+# The complete list of currently available search annotations is at
+#
+# https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html?highlight=dom_w_deg#search-annotations
+
 use warnings;
 use strict;
 
