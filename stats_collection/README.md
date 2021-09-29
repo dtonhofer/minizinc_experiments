@@ -55,7 +55,7 @@ on a 4-core Intel(R) Xeon(R) CPU W3520 @ 2.67GHz, Linux Fedora 33, 24 GiB RAM.
 
 ## Fields in the output `result.txt`
 
-The file `result.txt` lists the info collected, one MiniZinc run per line.
+The file [`result.txt`](/stats_collection/result.txt) lists the info collected, one MiniZinc run per line.
 
 - `base`: The basename of parameter/config file.
 - `round`: The index of the "round" (starting from 0) if exactly the same problem is run several times.
@@ -84,8 +84,9 @@ Refer to [Statistics Output](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html
 
 See
 
-   - [MiniZinc manual: Search](https://www.minizinc.org/doc-2.5.5/en/mzn_search.html)
-   - [MiniZinc manual: Search annotations](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html?highlight=dom_w_deg#search-annotations) (complete list of currently available search annotations)
+- [MiniZinc manual: Search](https://www.minizinc.org/doc-2.5.5/en/mzn_search.html)
+- [MiniZinc manual: Search annotations](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html?highlight=dom_w_deg#search-annotations) (complete list of currently available search annotations)
+- [CP Profiler](https://www.minizinc.org/doc-2.5.5/en/cpprofiler.html)
 
 ### Variable selection strategy
 
@@ -114,7 +115,6 @@ See
 ## See also
 
 - [MiniZinc command line tool](https://www.minizinc.org/doc-2.5.5/en/command_line.html)
-- [CP Profiler](https://www.minizinc.org/doc-2.5.5/en/cpprofiler.html)
 
 ## Python interface
 
