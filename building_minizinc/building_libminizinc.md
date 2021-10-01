@@ -1,6 +1,6 @@
-# Building `libminizinc`, the MiniZinc compiler and tools
+# Building "libminizinc", the MiniZinc compiler and libraries
 
-The manual has some description on how to build `libminizinc` on Linux:
+The manual has some description on how to build "libminizinc" on Linux:
 
 https://www.minizinc.org/doc-2.5.5/en/installation_detailed_linux.html
 
@@ -20,11 +20,12 @@ In that README, MiniZinc team recommends you use the binary packages here: https
 
 **But we want to build it ourselves!**
 
-Note that we have compiled `gecode` and `chuffed` already at this point, so we can use `gecode` during compilation of `libminizinc`.
+We assume that we have already compiled the solver libraries "Gecode" and "Chuffed"at this point,
+so we can use Gecode during compilation of libminizinc.
 
-The installation uses [_CMake_](https://en.wikipedia.org/wiki/CMake) to create the actual makefiles, so you need to have that on your system.
+The installation uses [CMake](https://en.wikipedia.org/wiki/CMake) to create the actual makefiles, so you need to have that on your system.
 
-_CMake_'s [User Interaction Guide](https://cmake.org/cmake/help/latest/guide/user-interaction/index.html) can provide
+CMake's [User Interaction Guide](https://cmake.org/cmake/help/latest/guide/user-interaction/index.html) can provide
 you with a quick introduction to compiling _CMake_ projects.
 
 Make sure you have what's needed. Commands differ between systems:
@@ -37,7 +38,7 @@ flex-2.6.4-5.fc33.x86_64
 gcc-c++-10.3.1-1.fc33.x86_64
 ```
 
-## Getting _libminizinc_
+## Getting libminizinc
 
 The github repository is here: https://github.com/MiniZinc/libminizinc
 
@@ -92,9 +93,9 @@ $ git branch -a
   remotes/origin/master
 ```
 
-There is the "master" branch and the "develop" branch, the latter actually existing on the remote repository. 
+There is the `master` branch and the `develop` branch, the latter on the remote repository. 
 
-As indicated by the `*`, we are currently on the "master" branch:
+As indicated by the `*`, we are currently on the `master` branch:
 
 ```
 $ git branch --show-current
@@ -103,7 +104,7 @@ master
 
 Yes, master!
 
-If you want to switch branch to "develop"` to get latest fixes (but you probably want to skip this to stay on `master`):
+If you want to switch branch to `develop` to get latest fixes:
 
 ```
 $ git checkout develop
@@ -111,7 +112,9 @@ Branch 'develop' set up to track remote branch 'develop' from 'origin'.
 Switched to a new branch 'develop'
 ```
 
-Check the log of the currently check-out branch:
+Switching to `develop` may be advantageous as it comes ith bug fixes that are not yet in the "relaease".
+
+Check the log of the currently checked-out branch:
 
 ```
 $ git log
@@ -122,19 +125,35 @@ Date:   Fri Mar 19 14:11:01 2021 +1100
     Add changelog for 2.5.5
 ```
 
+If you are on the `develop` branch, the messages are much fresher:
+
+```
+$ git log
+commit 175d055119f7d8e8c0d0972774824124230646c1 (HEAD -> develop, origin/develop)
+Author: Jip J. Dekker <jip@dekker.one>
+Date:   Fri Oct 1 17:42:54 2021 +1000
+
+    Fix lost output in simplify_constraint for functional _eq constraints
+    
+    (Seems this case was missing, it was present in the _le case)
+    
+    Fixes #503
+```
+
 Check whether any files have changed. In the example below, I have switched to branch `develop` beforehand:
 
 ```
 $ git status
-On branch master
-Your branch is up to date with 'origin/master'.
+On branch develop
+Your branch is up to date with 'origin/develop'.
 
 nothing to commit, working tree clean
 ```
 
-`origin/master` is the remote branch (branch `master` on the remote `origin`), branch `master` is a local branch.
+`origin/develop` is the remote branch (branch `develop` on the remote `origin`), branch `develop` is a local branch.
+And we are up-to-date with the remote. Good!
 
-## Compiling
+## Configuring and compiling
 
 The [README.md]( https://github.com/MiniZinc/libminizinc/blob/master/README.md) says:
 
@@ -155,7 +174,7 @@ compilation behaviour:
 Possible values for **<solver_name>** are `CPlex`, `Geas`, `Gecode`, `Gurobi`, `OsiCBC`, `SCIP`, and `Xpress`.
 ```
 
-You have to hint at the location of `gecode`, which you must have compiled previously! 
+We have to hint at the location of Gecode, compiled previously! 
 In our case, we put it into `/usr/local/minizinc/gecode/`, and we will use that path below.
 
 The manual says:
@@ -165,27 +184,34 @@ The manual says:
 > installation, Gecode either has to be in the default location (such as /usr/local/include etc.), or you
 > have to use the option -DGECODE_ROOT= when calling cmake.
 
-As said, we have `gecode` in `$MZN/gecode/` and want `libminizinc` 
-to go to `$MZN/libminizinc`.
+As said, we have `gecode` in `$MZN/gecode/` and want `libminizinc` to go to `$MZN/libminizinc_${VERSION}`.
 
 ```
-$ cd libminizinc # you should already be in that directory
+$ cd libminizinc    # ... you should already be in that directory
 $ mkdir build
 $ cd build
 $ MZN=/usr/local/minizinc
+$ VERSION=2021_10_01
 $ export Gecode_ROOT=$MZN/gecode/
-$ cmake -DCMAKE_INSTALL_PREFIX=$MZN/libminizinc -DCMAKE_BUILD_TYPE=Release ..
+$ cmake -DCMAKE_INSTALL_PREFIX=$MZN/libminizinc_${VERSION} -DCMAKE_BUILD_TYPE=Release ..
 ```
 
-Note the output, check it for interesting messages.
-
-Now compile:
+Look for the message
 
 ```
-$ cmake --build .
+-- Found Gecode: /usr/local/minizinc/gecode/include (found suitable version "6.3.1", minimum required is "6.0") 
+found components: Driver Float Int Kernel Minimodel Search Set Support
 ```
 
-Eventually you will see:
+Note the output, check it for interesting messages. 
+
+Then compile. Use `time` to see how long that takes:
+
+```
+$ time cmake --build .
+```
+
+After about 5 minutes you see:
 
 ```
 [ 91%] Building CXX object CMakeFiles/mzn.dir/lib/type.cpp.o
@@ -214,18 +240,25 @@ As `root`, cd to the `build` directory and then run:
 A tree appears at the configured location:
 
 ```
-# tree -L 2 /usr/local/minizinc/libminizinc/
-/usr/local/minizinc/libminizinc/
-├── bin
-│   ├── minizinc  (executable)
-│   └── mzn2doc   (executable)
-├── include
-│   └── minizinc
-├── lib64
-│   ├── cmake
-│   └── libmzn.a
-└── share
-    └── minizinc
+# tree -F -L 2 /usr/local/minizinc/libminizinc_2021_10_01/
+/usr/local/minizinc/libminizinc_2021_10_01/
+├── bin/
+│   ├── minizinc*
+│   └── mzn2doc*
+├── include/
+│   └── minizinc/
+├── lib64/
+│   ├── cmake/
+│   └── libmzn.a
+└── share/
+    └── minizinc/
+```
+
+Create a symlink to make `libminizinc` an alias to `libminizinc_2021_10_01`:
+
+```
+$ cd /usr/local/minizinc/
+$ ln -s libminizinc_2021_10_01/ libminizinc
 ```
 
 Extend the `PATH` as configured in `.bashrc` so that the `minizinc` executable can be found. In my case:
@@ -242,40 +275,40 @@ Drop root privileges, then:
 
 ```
 $  minizinc --help
-minizinc: error while loading shared libraries: libgecodedriver.so.49: cannot open shared object file: No such file or directory
+minizinc: error while loading shared libraries: libgecodedriver.so.52: cannot open shared object file: No such file or directory
 ```
 
-Evidently the gecode library is not being found.
+Evidently the Gecode libraries are not being found.
 
 This can be solved by extending `LD_LIBRARY_PATH` (but this is just a temporary solution)
 
 ```
 $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/minizinc/gecode/lib/
-$ minizinc --solvers
-MiniZinc driver.
-Available solver configurations:
-  none.
-Search path for solver configurations:
-  /usr/local/minizinc/libminizinc/share/minizinc/solvers
-  /usr/local/share/minizinc/solvers
-  /usr/share/minizinc/solvers
 ```
 
-For a permanent solution, switch to `root`, then:
+After that
 
-Add the file `minizinc.conf` to directory `/etc/ld.so.conf.d`. That file simply contains the name of the directory with the `minizinc` object files:
+```
+$  minizinc --help
+```
+
+works. For a permanent solution, switch to `root`, then:
+
+Add the file `gecode.conf` to directory `/etc/ld.so.conf.d`. 
+That file simply contains the name of the directory with the `gecode` library files.
+One can even use a symlink. The content is thus simply:
 
 ```
 /usr/local/minizinc/gecode/lib/
 ```
 
-Then rebuild the loader cache by running
+After that file has been created, rebuild the "loader" cache by running:
 
 ```
 # ldconfig
 ```
 
-## Make `gecode` visible to `libminizinc`
+## Making Gecode visible to libminizinc
 
 The gecode solver is not yet visible!
 
@@ -296,7 +329,7 @@ The manual says:
 > containing the following, where you replace with the actual installation path and
 > update the version number if necessary:
 
-So here is the updated JSON file
+So here is the updated JSON file, nominally for "release 6.2.0" although we are working with the 
 
 ```
 {
@@ -354,9 +387,9 @@ Here is a remark that I did not have to act on, but good to know:
 > to the MZN_SOLVER_PATH environment variable if the solvers haven't been 
 > installed in the same place as MiniZinc."
 
-## Make `chuffed` visible to `libminizinc`
+## Making Chuffed visible to libminizinc
 
-There is a `chuffed.msc` file in the chuffed installation:
+There is a `chuffed.msc` file in the chuffed installation, nominally for "release 6.2.0" although we are working with the `develop` branch:
 
 ```
 /usr/local/minizinc/chuffed/chuffed.msc
@@ -384,6 +417,9 @@ Search path for solver configurations:
   /usr/share/minizinc/solvers
 ```
 
+**NOTE** The `chuffed.msc` files differ substantially between the `master`/release version and the `develop` branch version!
+In particular, it lists all the "extra" flags.
+
 ## Running tests
 
 See https://github.com/MiniZinc/libminizinc/tree/master/tests
@@ -392,7 +428,7 @@ See https://github.com/MiniZinc/libminizinc/tree/master/tests
 
 Make sure you aren't `root` when running the tests.
  
-First, cd to the tests directory of the distribution:
+First, cd to the `tests` subdirectory of the distribution:
 
 ```
 $ cd tests
@@ -425,3 +461,10 @@ With the "develop" branch, thinks are looking a bit up:
 ```
 
 This needs some work!
+
+On the other hand, the `develop` branch fails because it tries to create a cache where it can't:
+
+```
+PytestCacheWarning: could not create cache path /usr/local/minizinc/libminizinc/bin/.pytest_cache/v/cache/nodeids
+```
+
