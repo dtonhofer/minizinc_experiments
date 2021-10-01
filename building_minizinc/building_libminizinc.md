@@ -428,7 +428,7 @@ See https://github.com/MiniZinc/libminizinc/tree/master/tests
 
 Make sure you aren't `root` when running the tests.
  
-First, cd to the `tests` subdirectory of the distribution:
+First, cd to the `tests` subdirectory of the distribution (i.e. not under `build`):
 
 ```
 $ cd tests
@@ -440,9 +440,10 @@ Get the Python stuff you need:
 $ pip install -r requirements.txt
 ```
 
-This will install required Python packages.
+This will install required Python packages. Note that the `master`/release version needs `PyYAML 5.3` but the `devel`
+version needs `PyYAML 5.4`.
 
-Now run the tests:
+Now run the tests, indicating the just installed version as "driver":
 
 ```
 $ pytest --solvers gecode,chuffed --driver /usr/local/minizinc/libminizinc/bin
