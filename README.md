@@ -5,6 +5,4 @@ Some code created while experimenting with MiniZinc during the course [Solving A
 The code for that course is at https://github.com/MiniZinc/specialization-examples
 
 - [A Perl script](https://github.com/dtonhofer/minizinc_experiments/tree/main/stats_collection) to collect statistics created by running the same MiniZinc program with varying "search strategy" annotations
-- [Notes on compiling MiniZinc](https://github.com/dtonhofer/minizinc_experiments/tree/main/compiling_minizinc)
-   - To be completed for compiling gecode and chuffed. 
-   - Note that you want to actually compile the development versions as these have bugfixes.
+- [Notes on building the `libminizinc` libraries and tools](https://github.com/dtonhofer/minizinc_experiments/tree/main/building_minizinc)
