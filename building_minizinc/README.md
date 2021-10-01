@@ -23,9 +23,9 @@ Here is an image depicting how these elements fits together (reality may differ 
   (It may be that the intermediary model it is not even serialized out into a file, but passed directly
   as an Abstract Syntax Tree?). In this case, Chuffed and Gecode.
   - Chuffed provides the tool `fzn-chuffed` to read a _FlatZinc_ file, build a model using the 
-    Chuffed classes, and solve it.
+    Chuffed classes (C++ classes), and solve it.
   - Gecode provides the tool `fzn-gecode` to read a _FlatZinc_ file, build a model using the 
-    Gecode classes, and solve it.
+    Gecode classes (also C++ classes), and solve it.
 - The pipeline is managed either by the `minizinc` tool, or from the command line, or a 
   script, or through the "MiniZinc IDE".
   
@@ -34,3 +34,5 @@ passing it to a solver is apparently `minizinc -c --solver org.minizinc.mzn-fzn`
 
 See ["Chapter 2.8: FlatZinc and Flattening"](https://www.minizinc.org/doc-2.5.5/en/flattening.html) 
 in the "MiniZinc Handbook" for more on this.
+
+See also the [Gecode documentation on _FlatZinc_](https://www.gecode.org/flatzinc.html) 
