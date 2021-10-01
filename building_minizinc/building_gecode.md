@@ -193,23 +193,17 @@ $ ./configure --help
 - To build with assertions (which is not done by default): `--enable-debug`
 - To build with support for finding memory leaks (which is not done by default): `--enable-leak-debug`
 
-Thus my configure command: 
+Thus my configure command. Set `VERSION` correctly: 
 
 ```
-./configure --prefix=/usr/local/minizinc/gecode_2021_05_14 --enable-debug --enable-leak-debug
+$ VERSION=2021_05_14  # or maybe VERSION=release
+$ ./configure --prefix=/usr/local/minizinc/gecode_${VERSION} --enable-debug --enable-leak-debug
 ```
 
 Then run `make`. Use `time` to time the processing if you like:
 
-Maybe:
-
 ```
-$ make clean
-```
-
-Then:
-
-```
+$ make clean  # optional
 $ time make
 ```
 
@@ -377,4 +371,4 @@ Float::Arithmetic::Div::C ++++
 ...
 ```
 
-This goes on for a couple of hours.
+This goes on for a few of hours.
