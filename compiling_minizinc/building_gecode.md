@@ -178,18 +178,20 @@ nothing to commit, working tree clean
 
 ## Configure and Compile
 
-I am using the following:
+Your current directory should be the toplevel directory of the `gecode` distribution.
+
+On my machine I have the following tools, needed for the next steps:
 
 ```
 $ rpm --query gcc gcc-c++
 gcc-10.3.1-1.fc33.x86_64
 gcc-c++-10.3.1-1.fc33.x86_64
 ```
-`
+
 The build process is based on [GNU Autoconf](https://www.gnu.org/savannah-checkouts/gnu/autoconf/manual/autoconf-2.70/index.html).
 This means the next command to execute in the directory with the checked-out files is `./configure`. 
 
-But first run this command and check for options of interest:
+First run this command and check for options of interest:
 
 ```
 $ ./configure --help
