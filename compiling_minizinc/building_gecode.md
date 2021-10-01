@@ -1,4 +1,4 @@
-# Building the "Gecode" solver
+# Building the "Gecode" solver libraries and tools
 
 ## About "Gecode"
 
