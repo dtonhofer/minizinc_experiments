@@ -14,7 +14,7 @@ Here is an image depicting how these elements fits together (reality may differ 
 
 - The user provides a model file `model.mzn` and possible a configuration/parameter file `data.dzn`.
   These are written in the _MiniZinc_ language (a restricted form of the full _Zinc_ language, which may not exist yet).
-- The `minizinc` tool provided by "libminizinc" (the latter a package of tools and libraries) compiles
+- The `minizinc` tool/compiler provided by "libminizinc" (the latter a package of tools and libraries) compiles
   the _MiniZinc_ model into an intermediary model expressed in the _FlatZinc_ language. _FlatZinc_ is
   simpler so that constraint propagation solvers (or even SAT solvers) can be given a preprocessing element that
   is able to transform _FlatZinc_ models into their respective internal models (implementation language-dependent
@@ -29,3 +29,8 @@ Here is an image depicting how these elements fits together (reality may differ 
 - The pipeline is managed either by the `minizinc` tool, or from the command line, or a 
   script, or through the "MiniZinc IDE".
   
+The invocation to make the `minizinc` compiler generate _FlatZinc_ output without
+passing it to a solver is apparently `minizinc -c --solver org.minizinc.mzn-fzn`.
+
+See ["Chapter 2.8: FlatZinc and Flattening"](https://www.minizinc.org/doc-2.5.5/en/flattening.html) 
+in the "MiniZinc Handbook" for more on this.
