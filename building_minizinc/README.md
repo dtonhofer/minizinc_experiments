@@ -6,9 +6,7 @@ This directory contains some notes on how to build, on Linux:
 - The "Chuffed" solver libraries and tools: [Building Chuffed](building_chuffed.md)
 - The "libminizinc" libraries and tools: [Building libminizinc](building_libminizinc.md)
 
-You want to first build "Gecode" and possibly "Chuffed".
-
-In particular, "libminizinc" needs files provided by "Gecode".
+You want to first build Gecode and Chuffed. In particular, "libminizinc" needs files provided by Gecode.
 
 Here is an image depicting how these elements fits together (reality may differ slightly, always open to fixes):
 
