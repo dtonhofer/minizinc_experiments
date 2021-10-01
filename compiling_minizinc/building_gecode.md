@@ -53,18 +53,18 @@ files of Gecode, so you have to build Gecode _first_.
 
 ## Getting Gecode
 
-The github repository is here: https://github.com/Gecode/gecode/
+The Gecode github repository is here: https://github.com/Gecode/gecode/
 
-Perform either of the following on the command line:
+Perform either of the following on the command line (as a standard user, not `root`):
 
 ```
-git clone git@github.com:Gecode/gecode.git
+$ git clone git@github.com:Gecode/gecode.git
 ```
 
 which may ask for your github account password, or
 
 ```
-git clone https://github.com/Gecode/gecode.git
+$ git clone https://github.com/Gecode/gecode.git
 ```
 
 which needs no password.
@@ -73,7 +73,6 @@ This will create a local directory `gecode`
 
 ```
 $ tree -L 1 -F gecode/
-
 gecode
 ├── driver/
 ├── driver.hh
@@ -139,8 +138,8 @@ Date:   Fri Apr 12 14:14:40 2019 +0200
     Formatting.
 ```
 
-You actually want to switch to the "develop" branch to use the latest bugfixes. Otherwise you will make your life hard
-(i.e. errors may appear for unreasonable reasons when you run MiniZinc.)
+You actually should switch to the `develop` branch to use the latest bugfixes. Otherwise you will make your life hard
+(i.e. errors long known about may appear when you run MiniZinc.)
 
 ```
 $ git checkout develop
