@@ -16,12 +16,6 @@ Gecode can process the [FlatZinc language files](https://www.gecode.org/flatzinc
 > the model. We also provide a simple front-end, an executable program that reads a FlatZinc model and prints
 > the solution (if any) on the standard output.    
 
-The invocation to make the MiniZinc compiler generate FlatZinc output without
-passing it to Gecode or another solver is apparently `minizinc -c --solver org.minizinc.mzn-fzn`.
-
-See ["Chapter 2.8: FlatZinc and Flattening"](https://www.minizinc.org/doc-2.5.5/en/flattening.html) 
-in the "MiniZinc Handbook" for more on this.
-
 The **"Gist"** tool (no relation to a github "gist") is the "Gecode interactive search tool".
 This might be the tool that gets invoked when you select "Profile search" in the MiniZinc IDE.
 
@@ -44,9 +38,9 @@ From the Gecode manual, chapter 2.4:
 - Humdinger PDF ["Modeling and programming with Gecode"](http://www.gecode.org/doc-latest/MPG.pdf ) by Christian Schulte, Guido Tack and
   Mikael Z. Lagerkvist. (578 pages) 
 
-## Need to compile Gecode before the MiniZinc compiler
+**You need to compile Gecode before libminizinc**
 
-The compilation process of the MiniZinc compiler (aka. "libminizinc"?) wants to use some
+The compilation process of the MiniZinc compiler and libraries (aka. "libminizinc") wants to use some
 files of Gecode, so you have to build Gecode _first_.
 
 ## Getting Gecode
