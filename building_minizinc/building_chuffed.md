@@ -1,4 +1,4 @@
-# Building the "Chuffed" libraries and tools
+# Building the "Chuffed" solver libraries and tools
 
 ## About "Chuffed"
 
