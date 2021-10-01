@@ -124,7 +124,7 @@ Your branch is up to date with 'origin/develop'.
 nothing to commit, working tree clean
 ```
 
-## Configure and Compile
+## Configuring and Compiling
 
 Your current directory should be the toplevel directory of the `chuffed` distribution.
 
@@ -147,7 +147,7 @@ gcc-c++-10.3.1-1.fc33.x86_64
 
 The build process is run by executing the following in turn. We will install the (development version of)
 Chuffed to directoy `/usr/local/minizinc/chuffed_2021_09_20` and create a "debug" build. Use `time`
-to evaluate the time taken to compile:
+to evaluate the time taken to compile. On my machine, it takes a bit more than 1 minute.
 
 ```
 $ mkdir build 
@@ -155,4 +155,105 @@ $ cd build
 $ cmake -DCMAKE_INSTALL_PREFIX=/usr/local/minizinc/chuffed_2021_09_20 -DCMAKE_BUILD_TYPE=Debug ..
 $ time cmake --build . --verbose
 ```
+
+### Errors may appear if you are compiling the `master` branch
+
+At this point, errors may appear if you are compiling the `master` branch instead of the `development` branch.
+See this [StackOverflow question](https://stackoverflow.com/questions/68655384/compilation-by-g-of-parser-code-created-by-bison-fails-because-yytokentype-e)
+
+Someone suggest a problem with `parser.tab`. Underneath the toplevel "chuffed" directory, there is:
+
+```
+./chuffed/flatzinc/parser.tab.cpp
+./chuffed/flatzinc/parser.tab.h
+```
+
+These should not be there! Remove them.
+
+Then remove the "build" directory and start again from the point where you created it.
+
+## Installing
+
+Switch to user `root`, change to the `build` directory in which you just compiled, then:
+
+```
+# cmake --build . --target install
+```
+
+Then we get the following (here, abbreviated) filetree in /usr/local/minizinc/chuffed_2021_09_20/`:
+
+```
+/usr/local/minizinc/chuffed_2021_09_20/
+├── bin
+│   └── fzn-chuffed
+├── chuffed.msc
+└── share
+    └── chuffed
+        └── mznlib
+            ├── all_different_int.mzn
+            ├── arg_max_bool.mzn
+            ├── at_least_int.mzn
+            ├── at_most_int.mzn
+            ├── chuffed.mzn
+            ├── circuit.mzn
+            ├── cost_regular.mzn
+            ├── count.mzn
+            ├── cumulative.mzn
+            ├── disjunctive.mzn
+            ├── disjunctive_strict.mzn
+            ├── distribute.mzn
+            ├── exactly_int.mzn
+            ├── global_cardinality_low_up.mzn
+            ├── inverse.mzn
+            ├── maximum_int.mzn
+            ├── minimum_int.mzn
+            ├── nvalue.mzn
+            ├── redefinitions.mzn
+            ├── regular.mzn
+            ├── subcircuit.mzn
+            ├── table_int.mzn
+            ├── values_interchange.mzn
+            ├── values_sequences.mzn
+            ├── variables_interchange.mzn
+            └── variables_sequences.mzn
+```
+
+`fzn-chuffed` is the "chuffed flatzinc executable", which reads FlatZinc language files and solves them.
+
+For easy accessibility, create a symlink:
+
+```
+# cd /usr/local/minizinc
+# ln -s chuffed_2021_09_20/ chuffed
+```
+
+## Testing
+
+There seems to be no tests.
+
+But we can build the examples. As non-root, go back to the `build` directory and do:
+
+```
+$ cmake --build . --target examples
+```
+
+This compilation currently fails on the `develop` branch
+
+```
+[ 61%] Building CXX object CMakeFiles/nurse.dir/chuffed/examples/nurse.cpp.o
+nurse.cpp:18:10: fatal error: mdd/circ_fns.h: No such file or directory
+   18 | #include <mdd/circ_fns.h>
+      |          ^~
+
+```
+
+It works on the `master` branch. A series of executables appear in directory build.
+However, there is no info on how to run those.
+
+Indeed the code of the examples is so minimal that you have to pass the correct arguments.
+If you don't they will segfault (for good reason as they try to get unavailable arguments
+out of `argv`).
+
+
+
 
