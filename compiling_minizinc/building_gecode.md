@@ -22,8 +22,6 @@ passing it to Gecode or another solver is apparently `minizinc -c --solver org.m
 See ["Chapter 2.8: FlatZinc and Flattening"](https://www.minizinc.org/doc-2.5.5/en/flattening.html) 
 in the "MiniZinc Handbook" for more on this.
 
-![Image](minizinc_pipeline.png)
-
 The **"Gist"** tool (no relation to a github "gist") is the "Gecode interactive search tool".
 This might be the tool that gets invoked when you select "Profile search" in the MiniZinc IDE.
 
