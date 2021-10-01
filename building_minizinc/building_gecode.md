@@ -168,7 +168,7 @@ Your branch is up to date with 'origin/develop'.
 nothing to commit, working tree clean
 ```
 
-## Configure and Compile
+## Configuring and compiling
 
 Your current directory should be the toplevel directory of the `gecode` distribution.
 
@@ -217,7 +217,7 @@ This takes about 10 minutes. Warnings are issued, but no matter.
 
 Interestingly `git status` will still show "no files changed" ... because `.gitignore` lists all the products of the build process. Well done!
 
-## Install
+## Installing
 
 Switch to user `root`, change to the directory in which you just compiled, then:
 
