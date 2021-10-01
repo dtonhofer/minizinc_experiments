@@ -1,5 +1,7 @@
 # Building the MiniZinc compiler/driver (`libminizinc`) itself 
 
+**These instructions for compiling on Linux, in this case Fedora 33**
+
 The manual has some description on how to build `libminizinc` on Linux:
 
 https://www.minizinc.org/doc-2.5.5/en/installation_detailed_linux.html
