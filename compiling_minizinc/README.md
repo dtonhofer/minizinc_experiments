@@ -1,4 +1,4 @@
-# Building the MiniZinc compiler/driver (`libminizinc`) itself 
+# Building the MiniZinc compiler/driver (_libminizinc_) itself 
 
 **These instructions for compiling on Linux, in this case Fedora 33**
 
@@ -41,9 +41,9 @@ gcc-c++-10.3.1-1.fc33.x86_64
 
 ## Getting _libminizinc_
 
-It is here: https://github.com/MiniZinc/libminizinc
+The github repository is here: https://github.com/MiniZinc/libminizinc
 
-Get it with the git protocol. Perform either of the following on the command line:
+Perform either of the following on the command line:
 
 ```
 git clone git@github.com:MiniZinc/libminizinc.git
@@ -60,31 +60,31 @@ which needs no password.
 This will create a local directory `libmimizinc`
 
 ```
-$ tree -L 1 libminizinc/
+$ tree -L 1 -F libminizinc/
 
 libminizinc/
 ├── changes.rst
-├── cmake
+├── cmake/
 ├── CMakeLists.txt
-├── docs
-├── include
-├── lib
+├── docs/
+├── include/
+├── lib/
 ├── LICENSE.txt
 ├── minizinc.cpp
 ├── mzn2doc.cpp
 ├── README.md
-├── share
-├── solvers
-└── tests
+├── share/
+├── solvers/
+└── tests/
 ```
 
-Thus
+Then:
 
 ```
 $ cd libminizinc/
 ```
 
-List git repository branches
+List git repository branches:
 
 ```
 $ git branch -a
@@ -94,9 +94,9 @@ $ git branch -a
   remotes/origin/master
 ```
 
-There is the "master" branch and the "develop" branch, the latter is on the remote. 
+There is the "master" branch and the "develop" branch, the latter actually existing on the remote repository. 
 
-What is the currently checked-out branch?
+As indicated by the `*`, we are currently on the "master" branch:
 
 ```
 $ git branch --show-current
@@ -105,7 +105,7 @@ master
 
 Yes, master!
 
-If you want to switch branch to `develop` to get latest fixes (but you probably want to skip this to stay on `master`):
+If you want to switch branch to "develop"` to get latest fixes (but you probably want to skip this to stay on `master`):
 
 ```
 $ git checkout develop
