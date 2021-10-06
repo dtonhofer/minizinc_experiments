@@ -1,14 +1,16 @@
 # Building the MiniZinc libraries and tools + associated solvers
 
-This directory contains some notes on how to build:
+While the **official documentation** about building MiniZinc from source can be found in the MiniZinc manual under
+[Installation from Source Code](https://www.minizinc.org/doc-2.5.5/en/installation_detailed.html), this
+directory contains my notes on how to build:
 
 - The "Gecode" solver libraries and tools: [Building Gecode](building_gecode.md)
 - The "Chuffed" solver libraries and tools: [Building Chuffed](building_chuffed.md)
 - The "libminizinc" libraries and tools: [Building libminizinc](building_libminizinc.md)
 
-on Linux (specifically, Linux Fedora 33).
+on Linux (in this case, Linux Fedora 33).
 
-You want to first build Gecode and Chuffed. In particular, "libminizinc" needs files provided by Gecode.
+You want to first build Gecode as libminizinc needs files provided by Gecode during its build process.
 
 Here is an image depicting how these elements fits together (reality may differ slightly):
 
