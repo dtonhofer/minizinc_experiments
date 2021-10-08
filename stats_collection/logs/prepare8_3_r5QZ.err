@@ -1,0 +1,8 @@
+% now     = 2021-10-08 14:02:38
+% data    = prepare8.dzn
+% model   = prepare_modded.mzn
+% base    = prepare8
+% round   = 3
+% limit_s = 60
+% s_annotation = int_search(s, largest, indomain_reverse_split)
+% minizinc minizinc --statistics --solver Gecode --model ./models/prepare_modded.mzn --data ./data/prepare8.dzn --cmdline-data 's_annotation = int_search(s, largest, indomain_reverse_split)' --fzn-flags '--time 60000'

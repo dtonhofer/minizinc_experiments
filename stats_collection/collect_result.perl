@@ -71,7 +71,7 @@ sub build_annotation {
 
 # ------------
 
-# Unqualified model file ("mzn" file)
+# Unqualifed model file ("mzn" file). We will look for it in the "models" directory.
 
 my $model_file = "prepare_modded.mzn";
 
@@ -112,30 +112,33 @@ my $data_files = {
 # ---
 # Establish directory where our stuff is, relative to this executable.
 #
-#                $work_dir/
-#                    |
-#      +-------------+-----------------+-------------+-----------------+
-#      |             |                 |             |                 |
-#  prog.perl   $fq_data_dir/    $fq_model_file   $fq_log_dir/     $fq_result_file
-#                    |             (mzn file)        |              (CSV file)
-#                   / \                             / \
-#              (contains the                     (accumulates
-#               @$data_files)                  subprocess logs)
-#
+#                                  $work_dir/
+#                                      |
+#      +-------------+-----------------+----------------+-----------------+
+#      |             |                 |                |                 |
+#      |            data/           models/           logs/           result.txt
+#  prog.perl    $fq_data_dir           |           $fq_logs_dir    $fq_result_file
+#                    |                 |                |             (CSV file)
+#                   / \               / \              / \
+#              (contains the    $fq_model_file     accumulates
+#               @$data_files)      (mzn file)    subprocess logs
+#                                                which are removed
+#                                                 if the process
+#                                                terminated with 0
 # ---
 
 my $work_dir       = dirname($0); # this doesn't necessarily work, need to process a --work_dir=... arg
-my $fq_model_file  = "$work_dir/$model_file";
+my $fq_model_file  = "$work_dir/models/$model_file";
 my $fq_data_dir    = "$work_dir/data";
-my $fq_log_dir     = "$work_dir/log";
+my $fq_logs_dir    = "$work_dir/logs";
 my $fq_result_file = "$work_dir/result.txt";
 
 die "Work directory '$work_dir' does not exist" unless (-d $work_dir);
 die "Modelfile '$fq_model_file' does not exist" unless (-e $fq_model_file);
 die "Directory '$fq_data_dir' does not exist"   unless (-d $fq_data_dir);
 
-if (! -d $fq_log_dir) {
-   mkdir $fq_log_dir || die "Could not create the log directory '$fq_log_dir': $!"
+if (! -d $fq_logs_dir) {
+   mkdir $fq_logs_dir || die "Could not create the logs directory '$fq_logs_dir': $!"
 }
 
 if (-e $fq_result_file) {
@@ -308,6 +311,72 @@ sub fork_child_process {
    }
 }
 
+# Add a tuple for the "time limit" parameter to the cmdline 
+# argument array (i.e. modify in-place) if the passed "$limit_s" is defined 
+# and > 0.
+#
+# Jip J. Dekker says:
+#
+# "The --fznflags MiniZinc flag is used to pass flags directly to the solver,
+#  in newer versions of MiniZinc this is not necessary anymore. Instead for
+#  solvers that have a correct configuration you can just use the flags directly."
+#
+# In this case, "--time" (also written as "-time") is "cutoff for time in
+# milliseconds". See page 198 of the PDF manual for Gecode, "Modeling and
+# Programming with Gecode", available here:
+# https://www.gecode.org/doc/6.2.0/reference/index.html
+
+sub maybe_add_time_limit_parameter {
+   my($cmdline,$limit_s) = @_;
+   if (defined($limit_s) && $limit_s > 0) {
+      my $val_ms = max(1000,$limit_s*1000); # at least 1000 ms
+      push @$cmdline, "--fzn-flags" , "--time $val_ms";
+   }
+}
+
+# Use https://perldoc.perl.org/File::Temp to create files
+# in directory "logs" to cpature stderr and stdout of MiniZinc
+# process.
+
+sub create_tempfiles {
+   my($base,$round,$fq_logs_dir) = @_;
+   my $pid = $$;
+   my $tempfile_pattern = "${base}_${round}_XXXX"; # Need at least 4 X as "random char placeholder"
+   (my ($fh_out, $filename_out) = 
+      tempfile( $tempfile_pattern , 
+                SUFFIX => ".out", 
+                DIR => $fq_logs_dir )) || 
+      die "Could not create temp file: $!";
+   (my ($fh_err, $filename_err) = 
+      tempfile( $tempfile_pattern , 
+                SUFFIX => ".err", 
+                DIR => $fq_logs_dir )) ||
+      die "Could not create temp file: $!";
+   # print STDERR "Filename_out = $filename_out\n";
+   # print STDERR "Filename_err = $filename_err\n";
+   binmode( $fh_out, ":utf8" );
+   binmode( $fh_err, ":utf8" );
+   return ($fh_out, $filename_out, $fh_err, $filename_err)
+}
+
+# The cmdline is an array that will be given to Perl's "system" call
+# https://www.minizinc.org/doc-2.5.5/en/command_line.html
+# https://perldoc.perl.org/functions/system
+ 
+sub build_minizinc_cmdline {
+   my($fq_model_file,$fq_data_file,$ann_name,$ann_text,$limit_s) = @_;
+   my $cmdline = [
+      "minizinc",
+      "--statistics",
+      "--solver"         , "Gecode",
+      "--model"          , $fq_model_file,
+      "--data"           , $fq_data_file,
+      "--cmdline-data"   , "$ann_name = $ann_text"
+   ];
+   maybe_add_time_limit_parameter($cmdline,$limit_s);
+   return $cmdline
+}
+
 sub fork_minizinc {
    my($task) = @_;
    my $fq_data_file   = $$task{fq_data_file};    die "Data file '$fq_data_file' does not exist" unless -e $fq_data_file;
@@ -317,35 +386,11 @@ sub fork_minizinc {
    my $round          = $$task{round};           die "Round is unset" unless defined $round; # For naming the result line
    my $ann_text       = build_annotation($task); # the annotation text to be injected into the model
 
-   #
-   # MiniZinc shall write its temporary files (one for stdout and another for stderr)
-   #
+   my ($fh_out,$filename_out,$fh_err,$filename_err) = create_tempfiles($base,$round,$fq_logs_dir);
 
-   my $pid = $$;
-   (my ($fh_out, $filename_out) = tempfile( "minizinc_${pid}_XXXX" , SUFFIX => ".out", DIR => $fq_log_dir )) || die "Could not create temp file: $!";
-   (my ($fh_err, $filename_err) = tempfile( "minizinc_${pid}_XXXX" , SUFFIX => ".err", DIR => $fq_log_dir )) || die "Could not create temp file: $!";
-
-   # print STDERR "Filename_out = $filename_out\n";
-   # print STDERR "Filename_err = $filename_err\n";
-   binmode( $fh_out, ":utf8" );
-   binmode( $fh_err, ":utf8" );
-   #
-   # Build MiniZinc command line
-   # https://www.minizinc.org/doc-2.5.5/en/command_line.html
-   # https://perldoc.perl.org/functions/system
-   #
-
-    my $cmdline = [
-      "minizinc",
-      "--statistics",
-      "--solver"         , "Gecode",
-      "--model"          , $fq_model_file,
-      "--data"           , $fq_data_file,
-      "--cmdline-data"   , "$ann_name = $ann_text"
-   ];
-
-   my $limit_s = maybe_add_time_limit_parameter($cmdline,$task);
-
+   my $limit_s = $$task{limit_s};
+   my $cmdline = build_minizinc_cmdline($fq_model_file,$fq_data_file,$ann_name,$ann_text,$limit_s);
+ 
    write_header_comment($fh_out,$task,"$ann_name = $ann_text",$limit_s);
    write_header_comment($fh_err,$task,"$ann_name = $ann_text",$limit_s);
 
@@ -418,29 +463,6 @@ sub write_cmdline {
       }
    }
    print $fh "\n";
-}
-
-# Jip J. Dekker says:
-# "The --fznflags MiniZinc flag is used to pass flags directly to the solver,
-#  in newer versions of MiniZinc this is not necessary anymore. Instead for
-#  solvers that have a correct configuration you can just use the flags directly."
-#
-# In this case, "--time" (also written as "-time") is "cutoff for time in
-# milliseconds". See page 198 of the PDF manual for Gecode, "Modeling and
-# Programming with Gecode", available here:
-# https://www.gecode.org/doc/6.2.0/reference/index.html
-
-sub maybe_add_time_limit_parameter {
-   my($cmdline,$task) = @_;
-   my $limit_s = $$task{limit_s};
-   if (defined($limit_s) && $limit_s > 0) {
-      my $val_ms = max(1000,$limit_s*1000);
-      push @$cmdline, "--fzn-flags" , "--time $val_ms";
-      return $limit_s
-   }
-   else {
-     return 0
-   }
 }
 
 sub process_system_retval_and_maybe_exit {

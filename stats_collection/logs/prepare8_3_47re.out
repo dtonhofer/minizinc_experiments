@@ -1,0 +1,33 @@
+% now     = 2021-10-08 14:02:38
+% data    = prepare8.dzn
+% model   = prepare_modded.mzn
+% base    = prepare8
+% round   = 3
+% limit_s = 60
+% s_annotation = int_search(s, largest, indomain_reverse_split)
+% minizinc minizinc --statistics --solver Gecode --model ./models/prepare_modded.mzn --data ./data/prepare8.dzn --cmdline-data 's_annotation = int_search(s, largest, indomain_reverse_split)' --fzn-flags '--time 60000'
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=900
+%%%mzn-stat: flatIntVars=326
+%%%mzn-stat: flatBoolConstraints=450
+%%%mzn-stat: flatIntConstraints=991
+%%%mzn-stat: evaluatedHalfReifiedConstraints=900
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.142437
+%%%mzn-stat-end
+
+makespan = 925
+451 471 738 769 908 458 484 516 540 558  67 164 187 224 282  53 139 215 312 381 742 772 814 862 879   0 126 555 639 700 626 654 666 692 812 294 357 602 764 845 603 617 762 829 870 483 584 617 685 864 
+----------
+%%%mzn-stat: initTime=0.051321
+%%%mzn-stat: solveTime=47.8597
+%%%mzn-stat: solutions=1719
+%%%mzn-stat: variables=1226
+%%%mzn-stat: propagators=1441
+%%%mzn-stat: propagations=17054624
+%%%mzn-stat: nodes=952761
+%%%mzn-stat: failures=172052
+%%%mzn-stat: restarts=0
+%%%mzn-stat: peakDepth=536
+%%%mzn-stat-end

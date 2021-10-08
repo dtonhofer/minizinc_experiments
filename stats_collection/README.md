@@ -20,8 +20,8 @@ The file structure is as follows:
 
 ```
 .
-├── collect_result.perl   - Perl program to run MiniZinc, writes result.txt
-├── data                  - Problem parameter files from Workshop 9
+├── collect_result.perl      ... Perl program to run MiniZinc, writes result.txt.
+├── data                     ... Problem parameter files from Workshop 9.
 │   ├── prepare10.dzn
 │   ├── prepare11.dzn
 │   ├── prepare12.dzn
@@ -36,22 +36,33 @@ The file structure is as follows:
 │   ├── prepare7.dzn
 │   ├── prepare8.dzn
 │   └── prepare9.dzn
-├── log                   - MiniZinc subprocesses dump their stdout/stderr into this directory
-├── prepare_modded.mzn    - Modified model file from Workshop 9
-├── result.txt            - Collected information as CSV file
+├── logs                      ... The stdout/sdterr of MiniZinc processes is
+│   ├── prepare13_4_CLNf.err  ... captured in logfiles that appear in this directory.
+│   ├── prepare13_4_r5QZ.out  ... The files are removed again if the MiniZinc
+│   ├── prepare4_0_47re.out   ... process terminates successfully. You can just
+│   ├── prepare4_0_r5QZ.err   ... remove this directory to clean up, it is
+│   ├── prepare9_0_47re.out   ... recreated on need.
+│   ├── prepare9_0_r5QZ.err
+│   └── prepare9_4_47re.out
+├── models
+│   └── prepare_modded.mzn    ... Modified model file from Workshop 9.
+│
+├── result.txt                ... Resulting collected information (CSV file).
+├── result.txt.1              ... A previous result.txt file, automatically renamed.
 └── README.md
 ```
 
-MiniZinc subprocesses write their stdout and stderr to files in directory `log`
+MiniZinc subprocesses write their stdout and stderr to files in directory `logs`
 and remove them again if all went well and a valid line could be added to `result.txt`.
-Otherwise the files remain in the `log` directory for manual inspection.
+Otherwise the files remain in the `logs` directory for manual inspection.
 
 If the file `result.txt` already exists if `collect_result.perl` is started,
-it is renamed by adding an integer index, thus avoiding accidental destruction
+it is renamed by adding an integer index. This avoids accidental destruction
 of data that might have taken a few hours to collect.
 
-The `result.txt` file found here is the result of running `collect_result.perl`
-on a 4-core Intel(R) Xeon(R) CPU W3520 @ 2.67GHz, Linux Fedora 33, 24 GiB RAM.
+The `result.txt` file in this repo contains the the result of running `collect_result.perl`
+on the given model and with the given parameter files on this machine:
+_4-core Intel(R) Xeon(R) CPU W3520 @ 2.67GHz, Linux Fedora 33, 24 GiB RAM_.
 
 ## Fields in the output `result.txt`
 
@@ -63,7 +74,7 @@ The file [`result.txt`](/stats_collection/result.txt) lists the info collected, 
 - `val_sel`: The setting for the "value selection" strategy (in this case, applied to the sought schedule "start times", variables `s`).
 - `limit_s`: Time limit given to MiniZinc in seconds; the best solution (in this case, shortest schedule solution) found within that limit counts.
 - `duration_s`: Time spent processing in seconds, as determined by the collection script.
-- **`makespan`**: Best overall duration of the schedule found. The smaller the better. If nothing was found, we write `NA`, as is the custom in `R`.
+- **`makespan`**: Best overall duration of the schedule found. The smaller the better. If nothing was found, we write `NA`, as is the custom in `R`. That field should more generally be called `obj` for "the 'objective'".
 
 Next come performance values output by MiniZinc due to the `--statistics` option.
 Refer to [Statistics Output](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html#statistics-output) in the manual
