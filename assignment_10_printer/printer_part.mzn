@@ -91,4 +91,48 @@ output [ concat( [
    endif
   | tx in TIME ])  ] ;
 
+/* ----
 
+This gives us output like the following, where the table has had all 
+rows that are the same as a preceding and a subsequent row eliminated:
+
+% maxt_of_course = 1224
+% maxt           = 563
+
+s = [0, 17, 47, 47, 97, 197, 163, 225, 305];
+c = [BOB, CAROL, ALICE, TED, CAROL, ALICE, CAROL, TED, ALICE];
+obj = 395;
+
+% Task  1: cook =   BOB [   0 ~  17 ~  16 ]  comes before task 2
+% Task  2: cook = CAROL [  17 ~  30 ~  46 ]  comes before tasks 3,4
+% Task  3: cook = ALICE [  47 ~ 150 ~ 196 ] 
+% Task  4: cook =   TED [  47 ~  50 ~  96 ]  comes before task 5
+% Task  5: cook = CAROL [  97 ~  66 ~ 162 ]  comes before task 6
+% Task  6: cook = ALICE [ 197 ~  78 ~ 274 ] 
+% Task  7: cook = CAROL [ 163 ~  62 ~ 224 ]  comes before task 8
+% Task  8: cook =   TED [ 225 ~  80 ~ 304 ]  comes before task 9
+% Task  9: cook = ALICE [ 305 ~  90 ~ 394 ] 
+
+%           |  BOB|CAROL|  TED|ALICE|
+% time    0:|  t-1|     |     |     |
+% time   16:|  t-1|     |     |     |
+% time   17:|     |  t-2|     |     |
+% time   46:|     |  t-2|     |     |
+% time   47:|     |     |  t-4|  t-3|
+% time   96:|     |     |  t-4|  t-3|
+% time   97:|     |  t-5|     |  t-3|
+% time  162:|     |  t-5|     |  t-3|
+% time  163:|     |  t-7|     |  t-3|
+% time  196:|     |  t-7|     |  t-3|
+% time  197:|     |  t-7|     |  t-6|
+% time  224:|     |  t-7|     |  t-6|
+% time  225:|     |     |  t-8|  t-6|
+% time  274:|     |     |  t-8|  t-6|
+% time  275:|     |     |  t-8|     |
+% time  304:|     |     |  t-8|     |
+% time  305:|     |     |     |  t-9|
+% time  394:|     |     |     |  t-9|
+% time  395:|     |     |     |     | ** OBJECTIVE 395 **
+% time  563:|     |     |     |     |
+
+*/
