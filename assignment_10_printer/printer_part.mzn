@@ -1,5 +1,5 @@
 % ------------------------------
-% Output magic for "Assignment 10" in Week 2 of the Courser Course
+% Output magic for "Assignment 10" in Week 2 of the Coursera Course
 % "Solving Algorithms for Discrete Optimization" by Prof. Jimmy Ho Man Lee and Prof. Peter James Stuckey,
 % which has its homepage at https://www.coursera.org/learn/solving-algorithms-discrete-optimization
 % ------------------------------
