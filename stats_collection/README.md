@@ -86,6 +86,25 @@ _4-core Intel(R) Xeon(R) CPU W3520 @ 2.67GHz, Linux Fedora 33, 24 GiB RAM_.
 `collect.cfg` is a [YAML](https://en.wikipedia.org/wiki/YAML) file that specifies what
 `collect.perl` should do. It is rather self-explanatory.
 
+## Running it
+
+A shown in `run_collect.sh`, the program takes a number of options that may help
+in understanding what it does or in debugging:
+
+By default one might call it like this
+
+```
+perl collect.perl --cfg=collect.cfg --parallel=4 --keeplogs 
+```
+
+To run 4 MiniZinc processes in parallel and not destroy the logs in the `logs` directory even if successful.
+
+One can switch on debugging by adding these flags:
+
+- `--debugcfg`: Print information about the configuration read and interpreted.
+- `--debugtasks`: Print information about the MiniZinc instantiations ("tasks") that are about to be run.
+- `--debugresults`:  For each task, print information about collected results. 
+
 ## Fields in the output `result.txt`
 
 The file [`result.txt`](/stats_collection/result.txt) lists the info collected, one MiniZinc run per line. Missing values
@@ -164,8 +183,5 @@ Jip J. Dekker says:
 
 ## Bugs
 
-They probably exist.
-
-
-
+They probably exist. 
 
