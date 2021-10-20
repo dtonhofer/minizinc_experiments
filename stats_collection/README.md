@@ -1,27 +1,36 @@
 # Stats Collection
 
-Collecting statistics over several runs of MiniZinc solving a scheduling problem.
+A program to collect statistics about running MiniZinc on a single model
+with several datafiles and with varying annotations to try different
+"variable selection" and "domain splitting" strategies.
 
-This problem is from week 1 of the course [Solving Algorithms for Discrete Optimization](https://www.coursera.org/learn/solving-algorithms-discrete-optimization)
+This problem helps in solving workshop 9 from week 1 of the course 
+[Solving Algorithms for Discrete Optimization](https://www.coursera.org/learn/solving-algorithms-discrete-optimization)
 by Prof. Jimmy Ho Man Lee and Prof. Peter James Stuckey.
 
-The idea is to tune the variable selection and value selection hints and take some
-conclusion as to what's best.
+In that workship one wants to find a good variable selection strategy
+and domain splitting strategy. To do so, one has to manually edit the
+"annotation" of the `solve` instruction which tells MiniZinc to select 
+particular search strategies.
 
-But why do it manually?
+Instead of doing this manually, 
+we write a Perl program that runs MiniZinc (on the command line) with a slightly
+modified version of the original assignment model. The modified model uses a parameter
+for the search strategy annotation instead of having a hardcoded one that needs
+to be changed by the user.
 
-We write a Perl program that runs MiniZinc (on the command line) with a slightly modified version of the model.
-The modified model uses a parameter for the annotation hinting at how to 
-select variables and values.
+A CVS file `result.txt` with results is created. That file can then be further processed, for example in RStudio
+or simply in Excel.
 
-A file with results is created. That file can then be further processed, for example in RStudio.
-
-The file structure is as follows:
+The file tree is as follows:
 
 ```
 .
-├── collect_result.perl      ... Perl program to run MiniZinc, writes result.txt.
-├── data                     ... Problem parameter files from Workshop 9.
+├── collect.perl       ... Perl program to run MiniZinc, writes result.txt.
+├── collect.cfg        ... YAML file which tells collect.perl what to do.
+├── run_collect.sh     ... Onleiner script to start collect.perl
+│
+├── data               ... Directory with the datafiles from Workshop 9. 
 │   ├── prepare10.dzn
 │   ├── prepare11.dzn
 │   ├── prepare12.dzn
@@ -36,20 +45,28 @@ The file structure is as follows:
 │   ├── prepare7.dzn
 │   ├── prepare8.dzn
 │   └── prepare9.dzn
+│
 ├── logs                      ... The stdout/sdterr of MiniZinc processes is
-│   ├── prepare13_4_CLNf.err  ... captured in logfiles that appear in this directory.
-│   ├── prepare13_4_r5QZ.out  ... The files are removed again if the MiniZinc
-│   ├── prepare4_0_47re.out   ... process terminates successfully. You can just
-│   ├── prepare4_0_r5QZ.err   ... remove this directory to clean up, it is
-│   ├── prepare9_0_47re.out   ... recreated on need.
-│   ├── prepare9_0_r5QZ.err
-│   └── prepare9_4_47re.out
+│   │                             captured in logfiles that appear in this directory.
+│   │                             The files are removed after the MiniZinc
+│   │                             process terminates successfully. You can just
+│   │                             remove this directory to clean up, it is
+│   │                             recreated on need.
+│   │
+│   └── prepare_modded_prepare7_1_BlBl.out
+│
 ├── models
 │   └── prepare_modded.mzn    ... Modified model file from Workshop 9.
 │
+├── modules                   ... Perl modules that are loaded by collect.perl
+│   └── Mzn
+│       ├── Forking.pm
+│       ├── ReadYaml.pm
+│       ├── ResultFiling.pm
+│       └── TaskQueue.pm
+|
 ├── result.txt                ... Resulting collected information (CSV file).
-├── result.txt.1              ... A previous result.txt file, automatically renamed.
-└── README.md
+└── result.ods                ... As above, but manually loaded into LibreOffice Calc
 ```
 
 MiniZinc subprocesses write their stdout and stderr to files in directory `logs`
@@ -64,31 +81,38 @@ The `result.txt` file in this repo contains the the result of running `collect_r
 on the given model and with the given parameter files on this machine:
 _4-core Intel(R) Xeon(R) CPU W3520 @ 2.67GHz, Linux Fedora 33, 24 GiB RAM_.
 
+## Configuration: collect.cfg
+
+`collect.cfg` is a [YAML](https://en.wikipedia.org/wiki/YAML) file that specifies what
+`collect.perl` should do. It is rather self-explanatory.
+
 ## Fields in the output `result.txt`
 
-The file [`result.txt`](/stats_collection/result.txt) lists the info collected, one MiniZinc run per line.
+The file [`result.txt`](/stats_collection/result.txt) lists the info collected, one MiniZinc run per line. Missing values
+are denoted by `NA` as is the custom in R (the statistical package).
 
-- `base`: The basename of parameter/config file.
-- `round`: The index of the "round" (starting from 0) if exactly the same problem is run several times.
-- `var_sel`: The setting for the "variable selection" strategy (in this case, applied to the sought schedule "start times", variables `s`).
-- `val_sel`: The setting for the "value selection" strategy (in this case, applied to the sought schedule "start times", variables `s`).
-- `limit_s`: Time limit given to MiniZinc in seconds; the best solution (in this case, shortest schedule solution) found within that limit counts.
+- `model`: A string derived from the name of the model file used for this run, to be used for sorting and searching.
+- `data`: A string derived from the name of the data file used for this run, to be used for sorting and searching.
+- `annotation`: The actual annotation text used when running the model. The actual values of the strategies employed are found in this string.
+- `round`: The index of the "round" (starting from 1) if the exact same problem is run several times (useful in case of random selection).
+- `rounds`: Number of rounds that will be run. Generally 1. 
+- `limit_s`: Time limit given to MiniZinc in seconds; the best solution (in this case, "shortest schedule solution") found within that limit counts.
 - `duration_s`: Time spent processing in seconds, as determined by the collection script.
-- **`makespan`**: Best overall duration of the schedule found. The smaller the better. If nothing was found, we write `NA`, as is the custom in `R`. That field should more generally be called `obj` for "the 'objective'".
+- `obj`: **objective value**, in this case best (shortest) overall duration of the schedule found. If nothing was found, we write `NA`, as is the custom in `R`.
 
 Next come performance values output by MiniZinc due to the `--statistics` option.
 Refer to [Statistics Output](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html#statistics-output) in the manual
 
 - `init_time_s`: Time spent initializing in seconds. Can be disregarded, as it's always below 0.1s.
 - `solve_time_s`: Time spent solving in seconds. Cannot be larger than `limit_s`, but can be smaller.
-- `solutions`: Solutions found during optimization. If this is 0, it's a bust!
-- `variables`: Number of variables created from the problem statement. (Here, varies from 71 to 2451 depending on problem.)
-- `propagators`: Number of variables created from the problem statement. (Here, varies from 78 to 2891 depending on problem.)
-- `propagations`: Number of propagator invocations. (Here, maximum observed value overall is 86 million.)
-- `nodes`: Number of search nodes. (Here, maximum observed value overall is 2 million.) 
-- `failures`: Number of leaf nodes that were failed. (Here, maximum observed value overall is above 1 million.)
+- `solutions`: Solutions found during optimization. If this is 0, it's a bust and `obj` should contain `NA`.
+- `variables`: Number of variables created from the problem statement. (In this case, varies from 71 to 2451 depending on problem.)
+- `propagators`: Number of variables created from the problem statement. (In this case, varies from 78 to 2891 depending on problem.)
+- `propagations`: Number of propagator invocations. (In this case, maximum observed value overall is 86 million.)
+- `nodes`: Number of search nodes. (In this case, maximum observed value overall is 2 million.) 
+- `failures`: Number of leaf nodes that were failed. (In this case, maximum observed value overall is above 1 million.)
 - `restarts`: Number of times the solver restarted the search (jumped back to the root search node). (Here, always 0.)
-- `peak_depth`: Peak depth of search tree reached. (Here, `prepare14` reaches 1300.)
+- `peak_depth`: Peak depth of search tree reached. (In this case, `prepare14` reaches 1300.)
 - `num_solutions`: The `nSolutions` value, this should be the "number of solutions output". It think.
 
 ## Info on search strategy annotations 
@@ -111,7 +135,9 @@ See
 - `max_regret`: choose the variable with the largest difference between the two smallest values in its domain.
 - `dom_w_deg`: choose the variable with the smallest value of domain size divided by weighted degree, which is the number of times it has been in a constraint that caused failure earlier in the search
 
-### Value selection strategy
+### Domain splitting strategy
+
+A variable's domain is always split in two. Thus the search tree is a binary tree.
 
 - `indomain_min`: assign the smallest value in the variable's domain
 - `indomain_max`: assign the largest value in the variable's domain
