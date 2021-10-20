@@ -5,7 +5,6 @@ int: n;
 set of int: TASK = 1..n;
 array[TASK] of int:  d;  % length of task
 
-ann: s_annotation; % *** The annotation is set externally ***
 
 int: m;
 set of int: PREC = 1..m;
@@ -37,9 +36,9 @@ constraint forall(i in DISJ, t1, t2 in disj[i] where t1 < t2)
                   
 var 0..maxt: makespan = max(e);
 
-solve :: s_annotation
-      %:: int_search(array1d(b), varsel, valsel, complete)
-      minimize makespan;
+ann: s_annotation;    % annotation is set from outside
+
+solve :: s_annotation minimize makespan;
 
 output ["makespan = ", show(makespan), "\n" ] ++
        [ show_int(3,s[t]) ++ " " 

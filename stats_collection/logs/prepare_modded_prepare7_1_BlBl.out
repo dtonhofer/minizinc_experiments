@@ -1,0 +1,96 @@
+% now        = 2021-10-20 23:06:31
+% modelfile  = stats_collection/models/prepare_modded.mzn
+% datafile   = stats_collection/data/prepare7.dzn
+% round      = 1 of 4
+% limit_s    = 30
+% annotation = s_annotation = int_search(s, input_order, indomain_random)
+%  minizinc --statistics --solver Gecode --model 'stats_collection/models/prepare_modded.mzn' --data 'stats_collection/data/prepare7.dzn' --cmdline-data 's_annotation = int_search(s, input_order, indomain_random)' --fzn-flags '--time 30000'
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=360
+%%%mzn-stat: flatIntVars=163
+%%%mzn-stat: flatBoolConstraints=180
+%%%mzn-stat: flatIntConstraints=427
+%%%mzn-stat: evaluatedHalfReifiedConstraints=360
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.172613
+%%%mzn-stat-end
+
+makespan = 56
+  3  18  28  37  44  50   0   9  15  30  41  51   4   9  13  22  37  39   8  13  23  28  31  47  14  23  26  40  52  55  14  17  21  31  46  50 
+----------
+%%%mzn-stat: initTime=0.031975
+%%%mzn-stat: solveTime=30.0006
+%%%mzn-stat: solutions=126
+%%%mzn-stat: variables=523
+%%%mzn-stat: propagators=607
+%%%mzn-stat: propagations=28786018
+%%%mzn-stat: nodes=221687
+%%%mzn-stat: failures=109931
+%%%mzn-stat: restarts=0
+%%%mzn-stat: peakDepth=52
+%%%mzn-stat-end
+%%%mzn-stat: nSolutions=1
+%%%mzn-stat-end
+$VAR1 = {
+          'around' => {
+                        'duration_s' => 30,
+                        'limit_s' => 30
+                      },
+          'minizinc' => {
+                          'failures' => 109931,
+                          'init_time_s' => '0.031975',
+                          'nodes' => 221687,
+                          'num_solutions' => 1,
+                          'peak_depth' => 52,
+                          'propagations' => 28786018,
+                          'propagators' => 607,
+                          'restarts' => 0,
+                          'solutions' => 126,
+                          'solve_time_s' => '30.0006',
+                          'variables' => 523
+                        },
+          'solution' => {
+                          'obj_name' => 'makespan',
+                          'obj_value' => 56,
+                          'sequence' => {
+                                          '1' => 3,
+                                          '10' => 30,
+                                          '11' => 41,
+                                          '12' => 51,
+                                          '13' => 4,
+                                          '14' => 9,
+                                          '15' => 13,
+                                          '16' => 22,
+                                          '17' => 37,
+                                          '18' => 39,
+                                          '19' => 8,
+                                          '2' => 18,
+                                          '20' => 13,
+                                          '21' => 23,
+                                          '22' => 28,
+                                          '23' => 31,
+                                          '24' => 47,
+                                          '25' => 14,
+                                          '26' => 23,
+                                          '27' => 26,
+                                          '28' => 40,
+                                          '29' => 52,
+                                          '3' => 28,
+                                          '30' => 55,
+                                          '31' => 14,
+                                          '32' => 17,
+                                          '33' => 21,
+                                          '34' => 31,
+                                          '35' => 46,
+                                          '36' => 50,
+                                          '4' => 37,
+                                          '5' => 44,
+                                          '6' => 50,
+                                          '7' => 0,
+                                          '8' => 9,
+                                          '9' => 15
+                                        }
+                        }
+        };
+
