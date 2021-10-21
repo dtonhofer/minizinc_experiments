@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 
 ######
-# A module for a program which runs MiniZinc repeatedly on the same model with 
-# different data files and different search annotations (to apply different 
-# variable selection strategies and domain splitting strategies), and collects 
+# A module for a program which runs MiniZinc repeatedly on the same model with
+# different data files and different search annotations (to apply different
+# variable selection strategies and domain splitting strategies), and collects
 # information about the run in a CSV file
 #
 # This module deals with running MiniZinc and collecting results.
@@ -34,7 +34,7 @@ our @EXPORT_OK =
 
 sub main_loop {
    my($task_queue,$parallel_procs,$logs_dir,$add_cmdline_to_logs,$keep_logs,$debug_results) = @_;
-   my $children = {}; # Active child processes. 
+   my $children = {}; # Active child processes.
    while (@$task_queue > 0) {
       if (%$children >= $parallel_procs) {
          print STDERR "Waiting for an empty child slot...\n";
@@ -120,13 +120,13 @@ sub fork_minizinc {
    my $rounds         = $$task{rounds};      die "Rounds is unset" unless defined $rounds; # For naming the result line
    my $annotation     = $$task{annotation};  die "Annotation is unset" unless defined $annotation; # TODO: We may need no annotation!
    my $ann_name       = $$task{ann_name};    die "Annotation name is unset" unless defined $ann_name; # TODO: We may need no annotation!
-   my $obj_name       = $$task{obj_name};    die "Objective value name is unset" unless defined $ann_name; 
+   my $obj_name       = $$task{obj_name};    die "Objective value name is unset" unless defined $ann_name;
    my $limit_s        = $$task{limit_s};     # Could be unset
 
    my ($fh_out,$filename_out,$fh_err,$filename_err) = create_tempfiles($base_mf,$base_df,$round,$logs_dir);
 
    my $cmdline = build_minizinc_cmdline($modelfile,$datafile,$ann_name,$annotation,$limit_s);
- 
+
    write_header_comment($fh_out,$task,"$ann_name = $annotation",$limit_s);
    write_header_comment($fh_err,$task,"$ann_name = $annotation",$limit_s);
 
@@ -156,18 +156,18 @@ sub fork_minizinc {
    close($fh_err) || die "Could not close $filename_err: $!";
 
    process_system_retval_and_maybe_exit($retval);
- 
+
    my $mzn_res = extract_solution_and_stats($filename_out,$obj_name);
 
    # TODO: Flexibilize this. Currently only useful for a specific MiniZinc model
    extract_sequence($filename_out,$obj_name,$mzn_res);
 
-   $$mzn_res{around} = { 
+   $$mzn_res{around} = {
        duration_s => ($end-$start)
       ,limit_s    => $limit_s
    };
 
-   if ($debug_results) { 
+   if ($debug_results) {
       print STDERR Data::Dumper->new([$mzn_res])->Sortkeys(1)->Dump;
    }
 
@@ -193,15 +193,15 @@ sub fork_minizinc {
 sub create_tempfiles {
    # Need at least 4 X as "random char placeholder", can we get rid of those
    my($base_mf,$base_df,$round,$logs_dir) = @_;
-   my $tempfile_pattern = "${base_mf}_${base_df}_${round}_XXXX"; 
-   (my ($fh_out, $filename_out) = 
-      tempfile( $tempfile_pattern , 
-                SUFFIX => ".out", 
-                DIR => $logs_dir )) || 
+   my $tempfile_pattern = "${base_mf}_${base_df}_${round}_XXXX";
+   (my ($fh_out, $filename_out) =
+      tempfile( $tempfile_pattern ,
+                SUFFIX => ".out",
+                DIR => $logs_dir )) ||
       die "Could not create temp file: $!";
-   (my ($fh_err, $filename_err) = 
-      tempfile( $tempfile_pattern , 
-                SUFFIX => ".err", 
+   (my ($fh_err, $filename_err) =
+      tempfile( $tempfile_pattern ,
+                SUFFIX => ".err",
                 DIR => $logs_dir )) ||
       die "Could not create temp file: $!";
    # print STDERR "Filename_out = $filename_out\n";
@@ -214,7 +214,7 @@ sub create_tempfiles {
 # The cmdline is an array that will be given to Perl's "system" call
 # https://www.minizinc.org/doc-2.5.5/en/command_line.html
 # https://perldoc.perl.org/functions/system
- 
+
 sub build_minizinc_cmdline {
    my($modelfile,$datafile,$ann_name,$annotation,$limit_s) = @_;
    my $cmdline = [
@@ -230,8 +230,8 @@ sub build_minizinc_cmdline {
    return $cmdline
 }
 
-# Add a tuple for the "time limit" parameter to the cmdline 
-# argument array (i.e. modify in-place) if the passed "$limit_s" is defined 
+# Add a tuple for the "time limit" parameter to the cmdline
+# argument array (i.e. modify in-place) if the passed "$limit_s" is defined
 # and > 0.
 #
 # Jip J. Dekker says:
@@ -302,7 +302,7 @@ sub process_system_retval_and_maybe_exit {
 # Solution data will be stored in a subhash under "solution", MiniZinc performance
 # data will be stored directly in the "res" hash.
 #
-# The program objective value is expected on a single line 
+# The program objective value is expected on a single line
 # <obj_name> = <numeric>;
 # This could be flexibilized!
 
@@ -397,7 +397,7 @@ sub write_to_resultfile_outer {
       ,'minizinc.init_time_s'   => $$mzn{init_time_s}
       ,'minizinc.solve_time_s'  => $$mzn{solve_time_s}
       ,'minizinc.solutions'     => $$mzn{solutions}
-      ,'minizinc.variables'     => $$mzn{variables} 
+      ,'minizinc.variables'     => $$mzn{variables}
       ,'minizinc.propagators'   => $$mzn{propagators}
       ,'minizinc.propagations'  => $$mzn{propagations}
       ,'minizinc.nodes'         => $$mzn{nodes}

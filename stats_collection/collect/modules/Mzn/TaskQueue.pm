@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 
 ######
-# A module for a program which runs MiniZinc repeatedly on the same model with 
-# different data files and different search annotations (to apply different 
-# variable selection strategies and domain splitting strategies), and collects 
+# A module for a program which runs MiniZinc repeatedly on the same model with
+# different data files and different search annotations (to apply different
+# variable selection strategies and domain splitting strategies), and collects
 # information about the run in a CSV file
 #
 # This module deals with setting up the "task queue" and some extras.
@@ -24,7 +24,7 @@ use File::Basename;
 use Fcntl qw(:flock SEEK_END);
 
 use Exporter qw(import);
-our @EXPORT_OK = 
+our @EXPORT_OK =
    qw(
        build_task_queue
        scramble_task_queue
@@ -51,8 +51,8 @@ sub build_task_queue {
          add_to_task_queue($task_queue,$modelfile,$datafile,$resultfile,$config_name,$configs)
       }
    }
-   if ($$args{debug_config}) { 
-      print STDERR "There are " . scalar(@$task_queue) . " entries in the task queue!\n"; 
+   if ($$args{debug_config}) {
+      print STDERR "There are " . scalar(@$task_queue) . " entries in the task queue!\n";
    }
    return $task_queue
 }
@@ -66,7 +66,7 @@ sub add_to_task_queue {
       my $rounds        = $$strategy_hash{rounds};     # should be set and >= 0 (0 meaning no rounds)
       my $limit_s       = $$strategy_hash{limit_s};    # should be set and >= 0 (0 meaning no limit)
       my $annotation    = $$strategy_hash{annotation};
-      my $ann_name      = $$strategy_hash{ann_name}; 
+      my $ann_name      = $$strategy_hash{ann_name};
       my $obj_name      = $$strategy_hash{obj_name};
       for (my $round = 1; $round <= $rounds; $round++) { # 1-based for once
          my $base_df = basename($datafile);
@@ -77,11 +77,11 @@ sub add_to_task_queue {
             { datafile      => $datafile,
               resultfile    => $resultfile,
               modelfile     => $modelfile,
-              base_mf       => $base_mf,        
+              base_mf       => $base_mf,
               base_df       => $base_df,
               round         => $round,           # 1...rounds
               rounds        => $rounds,          # constant
-              ann_name      => $ann_name, 
+              ann_name      => $ann_name,
               annotation    => $annotation,
               limit_s       => $limit_s,
               obj_name      => $obj_name }

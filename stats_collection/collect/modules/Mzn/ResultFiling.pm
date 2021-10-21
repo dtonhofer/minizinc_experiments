@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 
 ######
-# A module for a program which runs MiniZinc repeatedly on the same model with 
-# different data files and different search annotations (to apply different 
-# variable selection strategies and domain splitting strategies), and collects 
+# A module for a program which runs MiniZinc repeatedly on the same model with
+# different data files and different search annotations (to apply different
+# variable selection strategies and domain splitting strategies), and collects
 # information about the run in a CSV file
 #
 # This module deals with filling the result file.
@@ -21,7 +21,7 @@ use utf8;  # Meaning "This lexical scope (i.e. file) contains utf8"
 use Fcntl qw(:flock SEEK_END);
 
 use Exporter qw(import);
-our @EXPORT_OK = 
+our @EXPORT_OK =
    qw(
        touch_resultfile
        rename_resultfile_if_exists
@@ -47,35 +47,35 @@ sub get_resultfile_line {
    return {
        1  => {  name => "model"
                ,print => 1
-               ,format => '%15s' 
+               ,format => '%15s'
                ,comment => "the extension-stripped basename of the model file" }
       ,2  => {  name => "data"
-               ,print => 1 
-               ,format => '%15s' 
+               ,print => 1
+               ,format => '%15s'
                ,comment => "the extension-stripped basename of the data file" }
       ,3  => {  name => "annotation"
                ,format => '%15s'
-               ,print => 1 
+               ,print => 1
                ,comment => "full annotation text" }
       ,4  => {  name => "round"
                ,format => '%3d'
-               ,print => 1 
+               ,print => 1
                ,comment => "the index of the 'round' (starting from 1) if exactly the same problem is run several times" }
       ,5  => {  name => "rounds"
                ,format => '%3d'
-               ,print => 1 
+               ,print => 1
                ,comment => "the number of rounds expected" }
       ,6  => {  name => "limit_s"
                ,format => '%5d'
-               ,print => 1 
+               ,print => 1
                ,comment => "time limit given to MiniZinc in seconds; the best solution (in this case, shortest schedule solution) found within that limit is retained" }
       ,7  => {  name => "duration_s"
                ,format => '%5d'
-               ,print => 1 
+               ,print => 1
                ,comment => "time spent processing in seconds, as determined by the collection script" }
-      ,8  => {  name => "obj" 
+      ,8  => {  name => "obj"
                ,format => '%4d'
-               ,print => 1 
+               ,print => 1
                ,comment => "best objective value found (problem-dependent numeric scalar). If nothing was found, we write 'NA' (as is the custom in 'R')" }
 
       # The following have been parsed from MiniZinc statistics output.
@@ -83,47 +83,47 @@ sub get_resultfile_line {
 
       ,9  => {  name => "minizinc.init_time_s"
                ,format => '%4d'
-               ,print => 1 
+               ,print => 1
                ,comment => "time spent initializing in seconds" }
-      ,10 => {  name => "minizinc.solve_time_s"  
+      ,10 => {  name => "minizinc.solve_time_s"
                ,format => '%6.2f'
-               ,print => 1 
+               ,print => 1
                ,comment => "time spent solving in seconds. Cannot be larger than 'limit_s', but can be smaller" }
-      ,11 => {  name => "minizinc.solutions"     
+      ,11 => {  name => "minizinc.solutions"
                ,format => '%4d'
-               ,print => 1 
+               ,print => 1
                ,comment => "number of solutions found during optimization. If this is 0, it's a bust!" }
-      ,12 => {  name => "minizinc.variables"     
+      ,12 => {  name => "minizinc.variables"
                ,format => '%4d'
-               ,print => 1 
+               ,print => 1
                ,comment => "number of variables created from the problem statement" }
-      ,13 => {  name => "minizinc.propagators"   
+      ,13 => {  name => "minizinc.propagators"
                ,format => '%4d'
-               ,print => 1 
+               ,print => 1
                ,comment => "number of propagators" }
-      ,14 => {  name => "minizinc.propagations"  
+      ,14 => {  name => "minizinc.propagations"
                ,format => '%8d'
-               ,print => 1 
+               ,print => 1
                ,comment => "number of propagator invocations" }
-      ,15 => {  name => "minizinc.nodes"         
+      ,15 => {  name => "minizinc.nodes"
                ,format => '%8d'
-               ,print => 1 
+               ,print => 1
                ,comment => "number of search nodes" }
-      ,16 => {  name => "minizinc.failures"      
+      ,16 => {  name => "minizinc.failures"
                ,format => '%8d'
-               ,print => 1 
+               ,print => 1
                ,comment => "number of leaf nodes that were failed" }
-      ,17 => {  name => "minizinc.restarts"      
+      ,17 => {  name => "minizinc.restarts"
                ,format => '%4d'
-               ,print => 1 
+               ,print => 1
                ,comment => "number of times the solver restarted the search (jumped back to the root search node)" }
-      ,18 => {  name => "minizinc.peak_depth"    
+      ,18 => {  name => "minizinc.peak_depth"
                ,format => '%4d'
-               ,print => 1 
+               ,print => 1
                ,comment => "peak depth of search tree reached" }
-      ,19 => {  name => "minizinc.num_solutions" 
+      ,19 => {  name => "minizinc.num_solutions"
                ,format => '%2d'
-               ,print => 1 
+               ,print => 1
                ,comment => "the 'nSolutions' value, probably 'number of solutions output'" }
    };
 }
@@ -161,7 +161,7 @@ sub write_to_resultfile {
             my $value = $$result{$name};
             if (my $formatter = $$sub{formatter}) {
                # specialized routine
-               my $formatted = $formatter->($value); 
+               my $formatted = $formatter->($value);
                print $fh $formatted
             }
             elsif (my $format = $$sub{format}) {
@@ -174,7 +174,7 @@ sub write_to_resultfile {
                }
                else {
                   printf $fh ($format, $value);
-               } 
+               }
             }
             else {
                print STDERR "Missing formatter or format for '$name'\n";

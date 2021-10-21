@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 
 ######
-# A module for a program which runs MiniZinc repeatedly on the same model with 
-# different data files and different search annotations (to apply different 
-# variable selection strategies and domain splitting strategies), and collects 
+# A module for a program which runs MiniZinc repeatedly on the same model with
+# different data files and different search annotations (to apply different
+# variable selection strategies and domain splitting strategies), and collects
 # information about the run in a CSV file
 #
 # This module deals with reading a YAML file that provides configuration
@@ -24,7 +24,7 @@ use Data::Dumper;   # install with "dnf install perl-Data-Dumper"
 use File::Basename;
 
 use Exporter qw(import);
-our @EXPORT_OK = 
+our @EXPORT_OK =
    qw(
       read_and_interprete_yaml
      );
@@ -162,7 +162,7 @@ sub interprete_aliases_vss {
          print STDERR "An entry for '$key' already exists in the aliases for '$vss_indic'.\n";
          print STDERR "Existing value: '$$aliases_vss{$key}'.\n";
          print STDERR "New value     : '$val'.\n";
-         $error_count++            
+         $error_count++
       }
       else {
          $$aliases_vss{$key} = $val
@@ -224,7 +224,7 @@ sub interprete_configs_2 {
             $error_count += $e;
             if ($e == 0) {
                $$args{configs}{$config_name} = $single_config
-            } 
+            }
          }
          else {
             print STDERR "Whatever is stored under configuration '$loc' is not a hash.\n";
@@ -280,13 +280,13 @@ sub interprete_defaults {
    }
    return ($error_count,$defaults);
 }
- 
+
 sub interprete_strategies {
    my($yml,$defaults,$ann_template,$ann_name,$args,$indic_here) = @_;
    my $strategies = {};
    my $error_count = 0;
    for my $strategy_name (keys %$yml) {
-      if ($strategy_name eq $annotation_indic || 
+      if ($strategy_name eq $annotation_indic ||
           $strategy_name eq $defaults_indic) {
          # skip these as they are not strategies
          next
@@ -296,7 +296,7 @@ sub interprete_strategies {
       if (is_hashref($strategy_yml)) {
          my $nondefaults = {};
          ($$nondefaults{$_} = $$defaults{$_}) for keys %$defaults; # copy defaults into nondefaults
-         read_overrides($strategy_yml,$nondefaults,$loc); 
+         read_overrides($strategy_yml,$nondefaults,$loc);
          my($e1,$filled) = replace_in_template($strategy_yml,$ann_template,$args,$loc);
          $error_count = $error_count + $e1;
          if ($e1 == 0) {
@@ -309,7 +309,7 @@ sub interprete_strategies {
             }
          }
       }
-      else {  
+      else {
          print STDERR "Whatever is stored under '$loc' is not a hash.\n";
          $error_count++
       }
@@ -371,8 +371,8 @@ sub replace_in_template_2 {
    if ($template =~ /^(.*?)(\$[A-Za-z][A-Za-z0-9_]*)(.*?)$/) {
       my $before      = $1;
       my $placeholder = $2;
-      my $after       = $3;     
-      # a bit awkwardly, we demand that the placeholder contain "vss" or "dss" to be able to 
+      my $after       = $3;
+      # a bit awkwardly, we demand that the placeholder contain "vss" or "dss" to be able to
       # find out through which alias map the value for 'placeholder' in strategy_yml can be de-aliased
       if ($placeholder =~ /(vss|dss)/) {
          # recursive call may collect more errors
@@ -462,7 +462,7 @@ sub interprete_annotation {
       else {
          print STDERR "Whatever is stored under '$loc' is not a hash.\n";
          $error_count++
-      }      
+      }
    }
    else {
       print STDERR "The configuration at '$loc' contains no annotation information.\n";
@@ -483,12 +483,12 @@ sub read_annotation_name {
       }
       else {
          print STDERR "Stuff found at '$loc' does not look like a name.\n";
-         $error_count++  
+         $error_count++
       }
    }
    else {
       print STDERR "There is no annotation name at '$loc'.\n";
-      $error_count++  
+      $error_count++
    }
    return ($error_count,$ann_name)
 }
@@ -504,7 +504,7 @@ sub read_annotation_template {
    }
    else {
       print STDERR "There is no annotation template at '$loc'.\n";
-      $error_count++  
+      $error_count++
    }
    return ($error_count,$ann_template)
 }
@@ -529,7 +529,7 @@ sub interprete_modelfiles {
    }
    return $error_count
 }
-  
+
 sub interprete_modelfiles_2 {
    my($array,$args,$indic_here) = @_;
    my $res = [];
@@ -540,14 +540,14 @@ sub interprete_modelfiles_2 {
       }
       else {
          $abs_filename = File::Spec->catfile($$args{model_dir},$filename)
-      } 
+      }
       if (-f $abs_filename) {
          push @$res, $abs_filename;
       }
       else {
          print STDERR "The model file '$abs_filename' does not exist -- skipping this!\n";
       }
-   } 
+   }
    return $res # an arrayref
 }
 
@@ -575,7 +575,7 @@ sub interprete_datafiles {
 
 sub interprete_datafiles_2 {
    my($yml,$args,$indic_here) = @_;
-   my $error_count = 0;   
+   my $error_count = 0;
    for my $filename (keys %$yml) {
       my $abs_filename;
       if (File::Spec->file_name_is_absolute($filename)) {
@@ -584,7 +584,7 @@ sub interprete_datafiles_2 {
       }
       else {
          $abs_filename = File::Spec->catfile($$args{data_dir},$filename)
-      }     
+      }
       my $base_filename = basename($abs_filename);
       if (-f $abs_filename) {
          # the $filename is the key, the config name is the value

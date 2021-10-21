@@ -33,8 +33,8 @@ binmode STDOUT, ':encoding(UTF-8)';
 # Various imports. You may have to install appropriate packages.
 
 use File::Basename;
-use File::Spec;   
-use Getopt::Long;  
+use File::Spec;
+use Getopt::Long;
 use POSIX; # for getcwd
 
 # Extend the library path with a local directory holding our Perl Modules.
@@ -53,15 +53,15 @@ use POSIX; # for getcwd
 
 use lib File::Spec->catfile(dirname($0),'modules');
 
-use Mzn::ReadYaml 
+use Mzn::ReadYaml
    qw(read_and_interprete_yaml);
 
 use Mzn::ResultFiling
    qw(touch_resultfile
       rename_resultfile_if_exists);
 
-use Mzn::TaskQueue 
-   qw(build_task_queue 
+use Mzn::TaskQueue
+   qw(build_task_queue
       scramble_task_queue
       create_logs_dir_if_missing);
 
@@ -125,7 +125,7 @@ my ( $fq_configfile
 #                                           which are removed
 #                                            if the process
 #                                           terminated with 0
-# 
+#
 # The existence of $work_dir has been checked during processing of the command line.
 
 my $fq_model_dir  = "$work_dir/models";       # must exist (checked later)
@@ -145,7 +145,7 @@ if (! -d $fq_model_dir) {
 
 my $args = {
    configfile    => $fq_configfile,   # where the configfile is
-   data_dir      => $fq_data_dir,     # where the data files are 
+   data_dir      => $fq_data_dir,     # where the data files are
    model_dir     => $fq_model_dir,    # where the model files are
    resultfile    => $fq_resultfile,   # where the result goes
    debug_config  => $debug_config,    # do debug printing
@@ -154,7 +154,7 @@ my $args = {
    configs       => $configs,         # as above
    datafiles     => $datafiles,       # as above
    modelfiles    => $modelfiles };    # as above
- 
+
 read_and_interprete_yaml($args);
 
 if (@$modelfiles == 0) {
@@ -163,12 +163,12 @@ if (@$modelfiles == 0) {
 
 # build hash describing minizinc tasks to be run
 
-my $task_queue = build_task_queue($args); 
+my $task_queue = build_task_queue($args);
 
 if ($debug_tasks) {
    print STDERR Data::Dumper->new([$task_queue])->Sortkeys(1)->Dump
 }
-  
+
 if ($scramble) {
    $task_queue = scramble_task_queue($task_queue)
 }
@@ -226,7 +226,7 @@ sub process_cmdline_options {
 --workdir=<toplevel work dir>   : set the directory under which models and
                                   data files reside. If missing, the current
                                   directory is used.
---parallel=<number>             : start 'number' parallel MiniZinc processes 
+--parallel=<number>             : start 'number' parallel MiniZinc processes
                                   to work off all the tasks. Default is 1.
 --debugcfg                      : print debug info after configuration process.
 --debugtasks                    : print the tasks (args for MiniZinc executions).
