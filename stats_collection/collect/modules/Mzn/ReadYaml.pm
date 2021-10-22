@@ -108,6 +108,11 @@ sub is_arrayref {
    return (ref $maybe_ref_to_array eq ref [])
 }
 
+sub is_string {
+   my($maybe_string) = @_;
+   return (ref $maybe_string eq ref "")
+}
+
 sub interprete_aliases {
    my($yml,$aliases_vss,$aliases_dss) = @_;
    my $error_count = 0;
@@ -130,61 +135,63 @@ sub interprete_aliases {
 sub interprete_aliases_2 {
    my($yml,$aliases_vss,$aliases_dss,$indic_here) = @_;
    my $error_count = 0;
-   if (exists $$yml{$vss_indic}) {
-      my $subyml = $$yml{$vss_indic};
+   # These change the "aliases_vss" and "aliases_dss" in-place
+   my $e1 = interprete_aliases_3($yml,$vss_indic,$aliases_vss,"VSS",$indic_here);
+   my $e2 = interprete_aliases_3($yml,$dss_indic,$aliases_dss,"DSS",$indic_here);
+   return $e1 + $e2;
+}
+
+sub interprete_aliases_3 {
+   my($yml,$vod_indic,$vod_aliases,$vod_type,$indic_here) = @_;
+   my $error_count = 0;
+   if (exists $$yml{$vod_indic}) {
+      my $subyml = $$yml{$vod_indic};
+      my $loc = "$indic_here/$vod_indic";
       if (is_hashref($subyml)) {
-         $error_count += interprete_aliases_vss($subyml,$aliases_vss)
+         $error_count += interprete_aliases_4($subyml,$vod_aliases,$vod_type,$loc);
       }
       else {
-         print STDERR "Whatever is stored under '$indic_here/$vss_indic' is not a hash.\n";
+         print STDERR "Whatever is stored under '$loc' is not a hash.\n";
          $error_count++
       }
    }
-   if (exists $$yml{$dss_indic}) {
-      my $subyml = $$yml{$dss_indic};
-      if (is_hashref($subyml)) {
-         $error_count += interprete_aliases_dss($subyml,$aliases_dss)
-      }
-      else {
-         print STDERR "Whatever is stored under '$indic_here/$dss_indic' is not a hash.\n";
-         $error_count++
-      }
+   else {
+      # Nothing to do as there are no such aliases
    }
    return $error_count
 }
 
-sub interprete_aliases_vss {
-   my($yml,$aliases_vss) = @_;
+sub interprete_aliases_4 {
+   my($yml,$vod_aliases,$vod_type,$indic_here) = @_;
    my $error_count = 0;
-   for my $key (keys %$yml) {
-      my $val = $$yml{$key};
-      if (exists $$aliases_vss{$key}) { # only possible if the program has set one up
-         print STDERR "An entry for '$key' already exists in the aliases for '$vss_indic'.\n";
-         print STDERR "Existing value: '$$aliases_vss{$key}'.\n";
-         print STDERR "New value     : '$val'.\n";
-         $error_count++
+   my $new_aliases = {}; # work on a temporary map before doing in-place replacement
+   ($$new_aliases{$_} = $$vod_aliases{$_}) for keys %$vod_aliases; # copy over
+   for my $alias_key (keys %$yml) {
+      my $alias_val = $$yml{$alias_key};
+      if (is_string($alias_val)) { 
+         if (!exists $$new_aliases{$alias_val}) {
+            # There should be an entry for $alias_val in $aliases because
+            # because all the allowed (non-alias) keywords are (presumably)
+            # already in there, mapping to themselves.
+            # Emit a warning!
+            print STDERR "Warning: In the configuration, the $vod_type aliases contain the mapping '$alias_key' => '$alias_val', but '$alias_val' is unknown.\n"; 
+         }
+         if (exists $$new_aliases{$alias_key}) { 
+            # Really only possible if the program has set one up as it can come from the YAML
+            # which disallows multiple same keys
+            print STDERR "An entry for '$alias_key' already exists in the $vod_type aliases.\n";
+            print STDERR "Existing value : '$$new_aliases{$alias_key}'.\n";
+            print STDERR "New value      : '$alias_val'.\n";
+         }
+         $$new_aliases{$alias_key} = $alias_val;
       }
       else {
-         $$aliases_vss{$key} = $val
+         print STDERR "Whatever is stored under '$indic_here/$alias_key' is not a string.\n";
+         $error_count++
       }
    }
-   return $error_count
-}
-
-sub interprete_aliases_dss {
-   my($yml,$aliases_dss) = @_;
-   my $error_count = 0;
-   for my $key (keys %$yml) {
-      my $val = $$yml{$key};
-      if (exists $$aliases_dss{$key}) { # only possible if the program has set one up
-         print STDERR "An entry for '$key' already exists in the aliases for '$dss_indic'.\n";
-         print STDERR "Existing value: '$$aliases_dss{$key}'.\n";
-         print STDERR "New value     : '$val'.\n";
-         $error_count++
-      }
-      else {
-         $$aliases_dss{$key} = $val
-      }
+   if ($error_count == 0) {
+      ($$vod_aliases{$_} = $$new_aliases{$_}) for keys %$new_aliases; # copy over 
    }
    return $error_count
 }
@@ -239,16 +246,43 @@ sub interprete_single_config {
    my($yml,$args,$indic_here) = @_;
    my $single_config = {};
    my $error_count = 0;
+   #
+   # The config must hold one "annotation" element carrying the annotation name under 
+   # "name" and the annotation template under "template". Like this:
+   #
+   #  annotation:
+   #     name:       s_annotation
+   #     template:   int_search(s, $vss, $dss)
+   #
+   # It is an error if it is missing.
+   #
    my ($e1,$ann_name,$ann_template) = interprete_annotation($yml,$indic_here);
    $error_count += $e1;
    if ($e1 == 0) {
-     $$single_config{ann}{name}     = $ann_name;     die "no annotation name"     unless $ann_name;
-     $$single_config{ann}{template} = $ann_template; die "no annotation template" unless $ann_template;
+     $$single_config{ann}{name}     = $ann_name;     
+     $$single_config{ann}{template} = $ann_template; 
+     die "no annotation name"     unless $ann_name;     # assertion
+     die "no annotation template" unless $ann_template; # assertion
    }
-   my ($e2,$defaults) = interprete_defaults($yml,{ rounds => 1, limit_s => 0, obj_name => "obj" },$indic_here);
+   # 
+   # The config may hold defaults for "rounds", "limit_s", "obj_name".
+   # The whole "defaults" block may be missing or one or the other
+   # value may be missing. They can be overriden in individual strategies of
+   # the config. The "defaults" hash will contain the "superdefaults"
+   # overridden by any defaults found
+   #
+   my $superdefaults = {
+      rounds   => 1
+     ,limit_s  => 0      # no limit!
+     ,obj_name => "obj"
+   };
+   my ($e2,$defaults) = interprete_defaults($yml,$superdefaults,$indic_here);
    $error_count += $e2;
-   # Defaults will be distributed over configurations but not retained.
+   # 
+   # Defaults will be inserted into the individual "strategy" hashes so that
+   # later there is everything one needs into those hashes.
    # Only continue if no error so far.
+   #
    if ($error_count == 0) {
       my($e3,$strategies) = interprete_strategies($yml,$defaults,$ann_template,$ann_name,$args,$indic_here);
       $error_count += $e3;
@@ -291,34 +325,48 @@ sub interprete_strategies {
          # skip these as they are not strategies
          next
       }
-      my $strategy_yml = $$yml{$strategy_name};
-      my $loc = "$indic_here/$strategy_name";
-      if (is_hashref($strategy_yml)) {
-         my $nondefaults = {};
-         ($$nondefaults{$_} = $$defaults{$_}) for keys %$defaults; # copy defaults into nondefaults
-         read_overrides($strategy_yml,$nondefaults,$loc);
-         my($e1,$filled) = replace_in_template($strategy_yml,$ann_template,$args,$loc);
-         $error_count = $error_count + $e1;
-         if ($e1 == 0) {
-            $$strategies{$strategy_name} = {
-                annotation  => $filled
-               ,ann_name    => $ann_name
-               ,rounds      => $$nondefaults{rounds}
-               ,limit_s     => $$nondefaults{limit_s}
-               ,obj_name    => $$nondefaults{obj_name}
+      else {
+         my $subyml = $$yml{$strategy_name};
+         my $loc = "$indic_here/$strategy_name";
+         if (is_hashref($subyml)) {
+            my ($e,$single_strategy) = interprete_single_strategy($subyml,$defaults,$ann_template,$ann_name,$args,"$loc");
+            $error_count += $e;
+            if ($e == 0) {
+               $$strategies{$strategy_name} = $single_strategy
             }
          }
-      }
-      else {
-         print STDERR "Whatever is stored under '$loc' is not a hash.\n";
-         $error_count++
+         else {
+            print STDERR "Whatever is stored under strategy '$loc' is not a hash.\n";
+            $error_count++
+         }
       }
    }
    return ($error_count,$strategies)
 }
 
+sub interprete_single_strategy {
+   my($yml,$defaults,$ann_template,$ann_name,$args,$indic_here) = @_;
+   my $strategy;
+   my $nondefaults = {};
+   my $error_count = 0;
+   ($$nondefaults{$_} = $$defaults{$_}) for keys %$defaults; # copy defaults into nondefaults
+   read_overrides($yml,$nondefaults);
+   my($e1,$ann_filled) = replace_in_template($yml,$ann_template,$args,$indic_here);
+   $error_count = $error_count + $e1;
+   if ($e1 == 0) {
+      $strategy = {
+         annotation  => $ann_filled
+        ,ann_name    => $ann_name
+        ,rounds      => $$nondefaults{rounds}
+        ,limit_s     => $$nondefaults{limit_s}
+        ,obj_name    => $$nondefaults{obj_name}
+      }
+   }
+   return ($error_count,$strategy)
+}
+
 sub read_overrides {
-   my($yml,$defaults,$indic_here) = @_;
+   my($yml,$defaults) = @_;
    if (exists $$yml{$rounds_indic}) {
       my $x = parse_rounds($$yml{$rounds_indic});
       if (defined $x) { $$defaults{rounds} = $x } # override
@@ -356,15 +404,13 @@ sub parse_limit {
 }
 
 sub replace_in_template {
-   my($strategy_yml,$template,$args,$indic_here) = @_;
-   my $error_count = 0;
-   my ($e1,$filled) = replace_in_template_2($strategy_yml,$template,$template,$args,$indic_here);
-   $error_count += $e1;
-   return ($error_count,$filled);
+   my($yml,$template,$args,$indic_here) = @_;
+   # just kickstart the recursion
+   return replace_in_template_2($yml,$template,$template,$args,$indic_here);
 }
 
 sub replace_in_template_2 {
-   my($strategy_yml,$template,$orig_template,$args,$indic_here) = @_;
+   my($yml,$template,$orig_template,$args,$indic_here) = @_;
    my $error_count = 0;
    my $filled;
    my $mappings = {};
@@ -373,11 +419,11 @@ sub replace_in_template_2 {
       my $placeholder = $2;
       my $after       = $3;
       # a bit awkwardly, we demand that the placeholder contain "vss" or "dss" to be able to
-      # find out through which alias map the value for 'placeholder' in strategy_yml can be de-aliased
+      # find out through which alias map the value for 'placeholder' in $yml can be de-aliased
       if ($placeholder =~ /(vss|dss)/) {
          # recursive call may collect more errors
-         my($e1,$subfilled) = replace_in_template_2($strategy_yml,$after,$orig_template,$args,$indic_here); # RECURSIVE
-         my($e2,$resolved)  = resolve_placeholder($strategy_yml,$placeholder,$args,$indic_here);
+         my($e1,$subfilled) = replace_in_template_2($yml,$after,$orig_template,$args,$indic_here); # RECURSE
+         my($e2,$resolved)  = resolve_placeholder($yml,$placeholder,$args,$indic_here);
          $error_count = $error_count + $e1 + $e2;
          if ($e1 + $e2 == 0) {
             $filled = $before . $resolved . $subfilled;
@@ -399,19 +445,19 @@ sub replace_in_template_2 {
 }
 
 sub resolve_placeholder {
-   my($strategy_yml,$placeholder,$args,$indic_here) = @_;
+   my($yml,$placeholder,$args,$indic_here) = @_;
    my $error_count = 0;
    my $result;
    $placeholder =~ /^\$(.+)$/ or die "Placeholder '$placeholder' does not match '\$X'.\n";
    my $dollarless = $1;
    my $loc = "$indic_here/$dollarless";
-   if (exists $$strategy_yml{$dollarless}) {
-      my $alias = $$strategy_yml{$dollarless};
-      if (ref $alias eq ref "") {
+   if (exists $$yml{$dollarless}) {              # the dollarless place holdername must exist as key
+      my $alias = $$yml{$dollarless};
+      if (is_string($alias)) {                   # and it must be a string!
          my $alias_map;
          my $alias_type;
          if ($dollarless =~ /vss/) {
-            $alias_map  = $$args{aliases_vss};
+            $alias_map  = $$args{aliases_vss};   
             $alias_type = "VSS";
          }
          else {
@@ -419,7 +465,7 @@ sub resolve_placeholder {
             $alias_map  = $$args{aliases_dss};
             $alias_type = "DSS";
          }
-         if (exists $$alias_map{$alias}) {
+         if (exists $$alias_map{$alias}) {       # and it must exist in the selected "alias map", i.e. be known
             $result = $$alias_map{$alias}
          }
          else {

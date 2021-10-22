@@ -59,17 +59,22 @@ sub wait_for_any_child_termination {
    }
    else {
       my $retval = $?;
+      my $delay_s = time() - $$children{$pid};
+      my $sss = ($delay_s == 1) ? "" : "s";
       # Not sure whether the lower 8 bit are set after wait (?)
       if ($retval & 127) {
          my $sigval = ($retval & 127);
          my $ww     = (($retval & 128) ? "with" : "without");
-         printf STDERR "Child process with PID $pid died due to signal $sigval, $ww coredump\n";
+         printf STDERR "Child process with PID $pid died due to signal $sigval, $ww coredump, after $delay_s second$sss.\n";
       }
       else {
          # Good termination, see what the process said
          my $exit_status = ($retval >> 8);
          if ($exit_status > 0) {
-            print STDERR "Child process with PID $pid terminated with non-zero exit status $exit_status\n";
+            print STDERR "Child process with PID $pid terminated with non-zero exit status $exit_status, after $delay_s second$sss.\n";
+         }
+         else {
+            print STDERR "Child process with PID $pid terminated with zero status after $delay_s second$sss.\n";
          }
       }
       die "There is no child with PID $pid in the children hash!" unless exists $$children{$pid};
@@ -95,7 +100,7 @@ sub fork_child_process {
    elsif ($pid > 0) {
       # This is the parent process!
       die "Child pid $pid already exists in the children hash!" if exists $$children{$pid};
-      $$children{$pid} = 1;
+      $$children{$pid} = time();
       return $pid
    }
    else {

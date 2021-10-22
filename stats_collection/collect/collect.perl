@@ -72,27 +72,42 @@ use Mzn::Forking
 
 my $write_cmdline = 1;
 
-# aliases_vss: Known variable selection strategies, to be complemented with YAML file data
-# aliases_dss: Known domain splitting strategies, to be complemented with YAML file data
-# configs: Known configurations to be used for data files, to be filled with YAML file data
-# datafiles: Known data files to process, to be filled with YAML file data
-# modelfiles: Model files to process. Generally only 1
+# "aliases_vss" : Known "Variable Selection Strategies", to be 
+#                 complemented with YAML file data.
+#                 By default, the aliases just map to
+#                 themselves.
+# "aliases_dss" : Known "Domain Splitting Strategies", to be 
+#                 complemented with YAML file data.
+#                 By default, the aliases just map to
+#                 themselves.
+# "config"      : Known configurations to be used for data files, 
+#                 to be filled with YAML file data.
+# "datafiles"   : Known data files to process, to be filled with 
+#                 YAML file data.
+# "modelfiles"  : Model files to process. Generally only 1.
 
 my $aliases_vss = {
-    input_order       => 'input_order'
-   ,first_fail        => 'first_fail'
-   ,smallest          => 'smallest'
-   ,largest           => 'largest'
-   ,most_constrained  => 'most_constrained'
+     input_order       => 'input_order'      # choose in order from the array
+    ,first_fail        => 'first_fail'       # choose the variable with the smallest domain size
+    ,anti_first_fail   => 'anti_first_fail'  # choose the variable with the largest domain
+    ,smallest          => 'smallest'         # choose the variable with the smallest value in its domain
+    ,largest           => 'largest'          # choose the variable with the largest value in its domain
+    ,occurrence        => 'occurence'        # choose the variable with the largest number of attached constraints
+    ,most_constrained  => 'most_constrained' # choose the variable with the smallest domain, breaking ties using the number of constraints
+    ,max_regret        => 'max_regret'       # choose the variable with the largest difference between the two smallest values in its domain.
+    ,dom_w_deg         => 'dom_w_deg'        # choose the variable with the smallest value of domain size divided by weighted degree, which is the number of times it has been in a constraint that caused failure earlier in the search
 };
 
 my $aliases_dss = {
-    indomain_min           => 'indomain_min'
-   ,indomain_max           => 'indomain_max'
-   ,indomain_median        => 'indomain_median'
-   ,indomain_random        => 'indomain_random'
-   ,indomain_split         => 'indomain_split'
-   ,indomain_reverse_split => 'indomain_reverse_split'
+     indomain_min           => 'indomain_min'           # assign the smallest value in the variable's domain
+    ,indomain_max           => 'indomain_max'           # assign the largest value in the variable's domain
+    ,indomain_middle        => 'indomain_middle'        # assign the value in the variable’s domain closest to the mean of its current bounds
+    ,indomain_median        => 'indomain_median'        # assign the middle value in the variable’s domain
+    ,indomain               => 'indomain'               # nondeterministically assign values to the variable in ascending order
+    ,indomain_random        => 'indomain_random'        # assign a random value from the variable’s domain
+    ,indomain_split         => 'indomain_split'         # bisect the variable’s domain, excluding the upper half first.
+    ,indomain_reverse_split => 'indomain_reverse_split' # bisect the variable’s domain, excluding the lower half first.
+    ,indomain_interval      => 'indomain_interval'      # if the variable’s domain consists of several contiguous intervals, reduce the domain to the first interval. Otherwise just split the variable’s domain.
 };
 
 my $configs    = {};
