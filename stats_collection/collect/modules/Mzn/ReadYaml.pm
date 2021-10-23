@@ -168,15 +168,15 @@ sub interprete_aliases_4 {
    ($$new_aliases{$_} = $$vod_aliases{$_}) for keys %$vod_aliases; # copy over
    for my $alias_key (keys %$yml) {
       my $alias_val = $$yml{$alias_key};
-      if (is_string($alias_val)) { 
+      if (is_string($alias_val)) {
          if (!exists $$new_aliases{$alias_val}) {
             # There should be an entry for $alias_val in $aliases because
             # because all the allowed (non-alias) keywords are (presumably)
             # already in there, mapping to themselves.
             # Emit a warning!
-            print STDERR "Warning: In the configuration, the $vod_type aliases contain the mapping '$alias_key' => '$alias_val', but '$alias_val' is unknown.\n"; 
+            print STDERR "Warning: In the configuration, the $vod_type aliases contain the mapping '$alias_key' => '$alias_val', but '$alias_val' is unknown.\n";
          }
-         if (exists $$new_aliases{$alias_key}) { 
+         if (exists $$new_aliases{$alias_key}) {
             # Really only possible if the program has set one up as it can come from the YAML
             # which disallows multiple same keys
             print STDERR "An entry for '$alias_key' already exists in the $vod_type aliases.\n";
@@ -191,7 +191,7 @@ sub interprete_aliases_4 {
       }
    }
    if ($error_count == 0) {
-      ($$vod_aliases{$_} = $$new_aliases{$_}) for keys %$new_aliases; # copy over 
+      ($$vod_aliases{$_} = $$new_aliases{$_}) for keys %$new_aliases; # copy over
    }
    return $error_count
 }
@@ -247,7 +247,7 @@ sub interprete_single_config {
    my $single_config = {};
    my $error_count = 0;
    #
-   # The config must hold one "annotation" element carrying the annotation name under 
+   # The config must hold one "annotation" element carrying the annotation name under
    # "name" and the annotation template under "template". Like this:
    #
    #  annotation:
@@ -259,12 +259,12 @@ sub interprete_single_config {
    my ($e1,$ann_name,$ann_template) = interprete_annotation($yml,$indic_here);
    $error_count += $e1;
    if ($e1 == 0) {
-     $$single_config{ann}{name}     = $ann_name;     
-     $$single_config{ann}{template} = $ann_template; 
+     $$single_config{ann}{name}     = $ann_name;
+     $$single_config{ann}{template} = $ann_template;
      die "no annotation name"     unless $ann_name;     # assertion
      die "no annotation template" unless $ann_template; # assertion
    }
-   # 
+   #
    # The config may hold defaults for "rounds", "limit_s", "obj_name".
    # The whole "defaults" block may be missing or one or the other
    # value may be missing. They can be overriden in individual strategies of
@@ -278,7 +278,7 @@ sub interprete_single_config {
    };
    my ($e2,$defaults) = interprete_defaults($yml,$superdefaults,$indic_here);
    $error_count += $e2;
-   # 
+   #
    # Defaults will be inserted into the individual "strategy" hashes so that
    # later there is everything one needs into those hashes.
    # Only continue if no error so far.
@@ -288,6 +288,9 @@ sub interprete_single_config {
       $error_count += $e3;
       if ($e3 == 0) {
          $$single_config{strategies} = $strategies
+      }
+      else {
+         print STDERR "Errors encountered while reading strategies of configuration '$indic_here' -- dropping that configuration\n"
       }
    }
    return ($error_count,$single_config)
@@ -361,6 +364,9 @@ sub interprete_single_strategy {
         ,limit_s     => $$nondefaults{limit_s}
         ,obj_name    => $$nondefaults{obj_name}
       }
+   }
+   else {
+      print STDERR "Errors encountered while reading strategy '$indic_here' -- dropping that strategy\n"
    }
    return ($error_count,$strategy)
 }
@@ -457,7 +463,7 @@ sub resolve_placeholder {
          my $alias_map;
          my $alias_type;
          if ($dollarless =~ /vss/) {
-            $alias_map  = $$args{aliases_vss};   
+            $alias_map  = $$args{aliases_vss};
             $alias_type = "VSS";
          }
          else {
@@ -469,7 +475,7 @@ sub resolve_placeholder {
             $result = $$alias_map{$alias}
          }
          else {
-            print STDERR "The placeholder '$loc' has no $alias_type alias.\n";
+            print STDERR "The placeholder '$loc' maps to '$alias', but '$alias' is not in the $alias_type alias map and unknown.\n";
             $error_count++
          }
       }
@@ -611,10 +617,11 @@ sub interprete_datafiles {
       }
    }
    else {
-      print STDERR "Warning: there is no data for '$datafiles_indic'!\n";
-      # If a datafile is not actually needed for the model, one would need to define a dummy.
+      print STDERR "Warning: there is no information about datafiles. It should be under '$datafiles_indic'!\n";
+      # TODO: If a datafile is not actually needed for the model, one would need to define a dummy.
       # One way to avoid that would be to have a "nodatafiles" entry mapping to the
       # appropriate config.
+      $error_count++;
    }
    return $error_count
 }
@@ -622,32 +629,79 @@ sub interprete_datafiles {
 sub interprete_datafiles_2 {
    my($yml,$args,$indic_here) = @_;
    my $error_count = 0;
+   my $datafiles = $$args{datafiles};
    for my $filename (keys %$yml) {
-      my $abs_filename;
-      if (File::Spec->file_name_is_absolute($filename)) {
-         # only happens if the hash key looks like an absolute filename
-         $abs_filename = $filename
-      }
-      else {
-         $abs_filename = File::Spec->catfile($$args{data_dir},$filename)
-      }
-      my $base_filename = basename($abs_filename);
+      my ($abs_filename,$base_filename) = absolutize_filename($filename,$$args{data_dir});
       if (-f $abs_filename) {
-         # the $filename is the key, the config name is the value
-         my $config_name = $$yml{$filename};
-         if (exists $$args{configs}{$config_name}) {
-            $$args{datafiles}{$abs_filename} = $config_name;
+         my $known_configs = $$args{configs};
+         my($e1,$configs_to_apply) = interprete_configs_associated_to_datafile($yml,$filename,$known_configs,"$indic_here/$filename");
+         $error_count += $e1;
+         if ($e1 == 0) {
+            die "No configs, need at least one" unless @$configs_to_apply;
+            $$datafiles{$abs_filename} = $configs_to_apply
          }
          else {
-            print STDERR "There is no configuration '$config_name' as requested for data file '$filename'.\n";
-            $error_count++
+            print STDERR "Errors reading configurations for data file '$abs_filename' ('$indic_here/$filename') -- skipping that data file!\n";
          }
       }
       else {
-         print STDERR "The data file '$abs_filename' does not exist -- skipping that file!\n";
+         print STDERR "The data file '$abs_filename' ('$indic_here/$filename') does not seem to exist -- skipping that data file!\n";
+         $error_count++  # make this an error that will preclude running
       }
    }
    return $error_count
 }
 
+sub absolutize_filename {
+   my($filename,$data_dir) = @_;
+   my $abs_filename;
+   my $base_filename;
+   if (File::Spec->file_name_is_absolute($filename)) {
+      # only happens if the hash key (i.e. $filename) looks like an absolute filename
+      $abs_filename = $filename
+   }
+   else {
+      $abs_filename = File::Spec->catfile($data_dir,$filename)
+   }
+   $base_filename = basename($abs_filename);
+   return ($abs_filename,$base_filename);
+}
+
+sub interprete_configs_associated_to_datafile {
+   my($yml,$filename,$known_configs,$indic_here) = @_;
+   my $value = $$yml{$filename};
+   my $error_count = 0;
+   my $passed;
+   my $configs_to_apply;
+   if (is_string($value)) {
+      $passed = [$value]
+   }
+   elsif (is_arrayref($value)) {
+      $passed = $value
+   }
+   else {
+      print STDERR "Neither a string nor an array at '$indic_here' -- disregarding this entry!\n";
+      $error_count++
+   }
+   if ($error_count == 0) {
+      ($error_count,$configs_to_apply) = traverse_array_of_configs($passed,$known_configs,$indic_here)
+   }
+   return ($error_count,$configs_to_apply)
+}
+
+sub traverse_array_of_configs {
+   my($array,$known_configs,$indic_here) = @_;
+   my $configs_to_apply = [];
+   my $error_count = 0;
+   for my $maybe_config_name (@$array) {
+      if (exists $$known_configs{$maybe_config_name}) {
+         push @$configs_to_apply, $maybe_config_name;
+      }
+      else {
+         print STDERR "There is no configuration '$maybe_config_name' as requested at '$indic_here' -- disregarding this entry!\n";
+         $error_count++
+      }
+   }
+   return ($error_count,$configs_to_apply)
+}
 

@@ -72,17 +72,17 @@ use Mzn::Forking
 
 my $write_cmdline = 1;
 
-# "aliases_vss" : Known "Variable Selection Strategies", to be 
+# "aliases_vss" : Known "Variable Selection Strategies", to be
 #                 complemented with YAML file data.
 #                 By default, the aliases just map to
 #                 themselves.
-# "aliases_dss" : Known "Domain Splitting Strategies", to be 
+# "aliases_dss" : Known "Domain Splitting Strategies", to be
 #                 complemented with YAML file data.
 #                 By default, the aliases just map to
 #                 themselves.
-# "config"      : Known configurations to be used for data files, 
+# "config"      : Known configurations to be used for data files,
 #                 to be filled with YAML file data.
-# "datafiles"   : Known data files to process, to be filled with 
+# "datafiles"   : Known data files to process, to be filled with
 #                 YAML file data.
 # "modelfiles"  : Model files to process. Generally only 1.
 
@@ -123,7 +123,8 @@ my ( $fq_configfile
     ,$work_dir
     ,$scramble
     ,$parallel_procs
-    ,$keep_logs ) = process_cmdline_options();
+    ,$keep_logs,
+    ,$dry_run ) = process_cmdline_options();
 
 # The $work_dir has been given on the command line. Underneath, we expect this:
 #
@@ -149,12 +150,12 @@ my $fq_logs_dir   = "$work_dir/logs";         # created if missing
 my $fq_resultfile = "$work_dir/result.txt";   # CSV file; if exists, the old one is renamed
 
 if (! -d $fq_data_dir) {
-   print STDERR "Data directory '$fq_data_dir' does not exist -- exiting\n";
+   print STDERR "Data directory '$fq_data_dir' does not exist -- exiting!\n";
    exit 1
 }
 
 if (! -d $fq_model_dir) {
-   print STDERR "Model directory '$fq_model_dir' does not exist -- exiting\n";
+   print STDERR "Model directory '$fq_model_dir' does not exist -- exiting!\n";
    exit 1
 }
 
@@ -170,18 +171,25 @@ my $args = {
    datafiles     => $datafiles,       # as above
    modelfiles    => $modelfiles };    # as above
 
+print STDERR "Configuring using config file '$fq_configfile'\n";
+
 read_and_interprete_yaml($args);
 
 if (@$modelfiles == 0) {
-   print STDERR "No modelfiles remain -- exiting\n";
+   print STDERR "After examining the configuration, no model files remain -- exiting!\n";
 }
 
 # build hash describing minizinc tasks to be run
 
 my $task_queue = build_task_queue($args);
 
-if ($debug_tasks) {
+if ($debug_tasks || $dry_run) {
    print STDERR Data::Dumper->new([$task_queue])->Sortkeys(1)->Dump
+}
+
+if ($dry_run) {
+   print STDERR "Just a dry run -- exiting!\n";
+   exit 0
 }
 
 if ($scramble) {
@@ -210,12 +218,14 @@ sub process_cmdline_options {
    my $keep_logs;
    my $debug_tasks;
    my $debug_results;
+   my $dry_run;
    # https://perldoc.perl.org/Getopt::Long
    GetOptions(
        "help"         => \$help
       ,"debugcfg"     => \$debug_config
       ,"debugtasks"   => \$debug_tasks
       ,"debugresults" => \$debug_results
+      ,"dryrun"       => \$dry_run
       ,"scramble"     => \$scramble
       ,"keeplogs"     => \$keep_logs
       ,"cfg=s"        => \$configfile
@@ -248,6 +258,7 @@ sub process_cmdline_options {
 --debugresults                  : print the results obtained from MiniZinc.
 --scramble                      : scramble the task queue for more randomness.
 --keeplogs                      : do not delete MiniZinc logs after completion.
+--dryrun                        : Just print the tasks that would be run.
 EOF
       print STDERR $msg;
       if ($error_count>0) {
@@ -266,7 +277,7 @@ EOF
       print STDERR "The config file '$fq_configfile' does not exist or is not a file -- exiting\n";
       exit 1
    }
-   return ($fq_configfile,$debug_config,$debug_tasks,$debug_results,$work_dir,$scramble,$parallel_procs,$keep_logs)
+   return ($fq_configfile,$debug_config,$debug_tasks,$debug_results,$work_dir,$scramble,$parallel_procs,$keep_logs,$dry_run)
 }
 
 

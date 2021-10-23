@@ -1,7 +1,13 @@
 #!/bin/bash
 
-perl collect/collect.perl --cfg=cfg/explained.cfg --parallel=4 --keeplogs 
+# The final "$@" passes any additional command line args given to this
+# script on to "collect.perl"
+
+perl collect/collect.perl --cfg=cfg/simple.cfg --parallel=4 "$@"
 
 # Debugging flags:
-# --debugcfg --debugtasks --debugresults --keeplogs
+# --debugcfg
+# --debugtasks
+# --debugresults
+# --keeplogs
 
