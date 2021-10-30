@@ -3,11 +3,19 @@
 # The final "$@" passes any additional command line args given to this
 # script on to "collect.perl"
 
-perl collect/collect.perl --cfg=cfg/simple.cfg --parallel=4 "$@"
+cfgfile=cfg/explained.cfg
+mydir=$(dirname $0)
 
-# Debugging flags:
+perl $mydir/collect/collect.perl "--cfg=$cfgfile" "--workdir=$mydir" --parallel=4 "$@"
+
+# Possible debugging flags that can be additionally passed:
+#
 # --debugcfg
 # --debugtasks
 # --debugresults
 # --keeplogs
+#
+# and to stop before running MiniZinc:
+#
+# --dryrun
 

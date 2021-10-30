@@ -72,12 +72,18 @@ constraint forall(i in DISJ, t1, t2 in disj[i] where t1 < t2)
 
 var 0..maxt: makespan = max(e);
 
-% Annotation parameter to suggest search strategy, set during MiniZinc invocation
-% Note that it makes sense to try various strategies for s and b.
+% Annotation parameter to suggest search strategy, set during MiniZinc invocation.
+% Note that it makes sense to try various strategies for "s" and "b" and even maybe "makespan",
+% isolated or in combination.
+%
+% Additionally, a restart annotation may be set to cause restart if a certain
+% number of nodes have been visited. By default the value of the restart annotation
+% is "restart_none" 
 
-ann: my_annotation;
+ann: my_search_annotation;
+ann: my_restart_annotation;
 
-solve :: my_annotation minimize makespan;
+solve :: my_search_annotation :: my_restart_annotation minimize makespan;
 
 % ---
 % Ouptut

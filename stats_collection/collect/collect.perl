@@ -175,16 +175,19 @@ print STDERR "Configuring using config file '$fq_configfile'\n";
 
 read_and_interprete_yaml($args);
 
-if (@$modelfiles == 0) {
-   print STDERR "After examining the configuration, no model files remain -- exiting!\n";
+{
+   my $modelfiles = $$args{modelfiles};
+   if (@$modelfiles == 0) {
+      print STDERR "After examining the configuration, no model files remain -- exiting!\n";
+      exit 1;
+   }
 }
-
-# build hash describing minizinc tasks to be run
 
 my $task_queue = build_task_queue($args);
 
 if ($debug_tasks || $dry_run) {
-   print STDERR Data::Dumper->new([$task_queue])->Sortkeys(1)->Dump
+   print STDERR "There are " . scalar(@$task_queue) . " entries in the task queue\n";
+   print STDERR Data::Dumper->new([$task_queue])->Sortkeys(1)->Deepcopy(1)->Dump
 }
 
 if ($dry_run) {
@@ -247,18 +250,22 @@ sub process_cmdline_options {
    }
    if ($help || $error_count>0) {
       my $msg = << "EOF";
---cfg=<YAML configuration file> : set configuration file.
---workdir=<toplevel work dir>   : set the directory under which models and
-                                  data files reside. If missing, the current
-                                  directory is used.
---parallel=<number>             : start 'number' parallel MiniZinc processes
-                                  to work off all the tasks. Default is 1.
---debugcfg                      : print debug info after configuration process.
---debugtasks                    : print the tasks (args for MiniZinc executions).
---debugresults                  : print the results obtained from MiniZinc.
---scramble                      : scramble the task queue for more randomness.
---keeplogs                      : do not delete MiniZinc logs after completion.
---dryrun                        : Just print the tasks that would be run.
+--cfg=<YAML config file>      : Set configuration file.
+--workdir=<toplevel work dir> : Set the directory under which "model file"
+                                and "data files" reside. If missing, the
+                                current directory is used.
+--parallel=<number>           : Start 'number' parallel MiniZinc processes
+                                to work off all the tasks. Default is 1.
+                                (this is not the "number of threads" arg
+                                that gecode understands)
+--debugcfg                    : Print info about config read & processed.
+--debugtasks                  : Print tasks (arg sets for MiniZinc executions).
+--debugresults                : Print the results obtained from MiniZinc.
+--scramble                    : Scramble the MiniZinc task queue prior to
+                                running MiniZinc tasks for more randomness.
+--keeplogs                    : Do not delete MiniZinc logs after completion.
+--dryrun                      : Just print the tasks that would be run, then
+                                exit.
 EOF
       print STDERR $msg;
       if ($error_count>0) {

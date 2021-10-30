@@ -1,16 +1,11 @@
 #!/usr/bin/perl
 
-######
-# A module for a program which runs MiniZinc repeatedly on the same model with
-# different data files and different search annotations (to apply different
-# variable selection strategies and domain splitting strategies), and collects
-# information about the run in a CSV file
-#
-# This module deals with filling the result file.
+###############################################################################
+# Filling the result file.
 #
 # The homepage for this script with additional explanation is at
 # https://github.com/dtonhofer/minizinc_experiments/tree/main/stats_collection
-######
+###############################################################################
 
 package Mzn::ResultFiling;
 
@@ -53,27 +48,39 @@ sub get_resultfile_line {
                ,print => 1
                ,format => '%15s'
                ,comment => "the extension-stripped basename of the data file" }
-      ,3  => {  name => "annotation"
+      ,3  => {  name => "config_name"
+               ,print => 1
+               ,format => '%15s'
+               ,comment => "the name of the 'configuration'" }
+      ,4  => {  name => "application_name"
+               ,print => 1
+               ,format => '%15s'
+               ,comment => "the name of the 'application' inside the 'configuration'" }
+      ,5  => {  name => "search"
                ,format => '%15s'
                ,print => 1
-               ,comment => "full annotation text" }
-      ,4  => {  name => "round"
+               ,comment => "full search annotation text (can be long, can be missing)" }
+      ,6  => {  name => "restart"
+               ,format => '%15s'
+               ,print => 1
+               ,comment => "full restart annotation text (can be long, can be missing)" }
+      ,7  => {  name => "round"
                ,format => '%3d'
                ,print => 1
                ,comment => "the index of the 'round' (starting from 1) if exactly the same problem is run several times" }
-      ,5  => {  name => "rounds"
+      ,8  => {  name => "rounds"
                ,format => '%3d'
                ,print => 1
                ,comment => "the number of rounds expected" }
-      ,6  => {  name => "limit_s"
+      ,9  => {  name => "limit_s"
                ,format => '%5d'
                ,print => 1
                ,comment => "time limit given to MiniZinc in seconds; the best solution (in this case, shortest schedule solution) found within that limit is retained" }
-      ,7  => {  name => "duration_s"
+      ,10 => {  name => "duration_s"
                ,format => '%5d'
                ,print => 1
                ,comment => "time spent processing in seconds, as determined by the collection script" }
-      ,8  => {  name => "obj"
+      ,11 => {  name => "obj"
                ,format => '%4d'
                ,print => 1
                ,comment => "best objective value found (problem-dependent numeric scalar). If nothing was found, we write 'NA' (as is the custom in 'R')" }
@@ -81,47 +88,47 @@ sub get_resultfile_line {
       # The following have been parsed from MiniZinc statistics output.
       # Refer to https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html#statistics-output for the MiniZinc performance values.
 
-      ,9  => {  name => "minizinc.init_time_s"
+      ,12 => {  name => "minizinc.init_time_s"
                ,format => '%4d'
                ,print => 1
                ,comment => "time spent initializing in seconds" }
-      ,10 => {  name => "minizinc.solve_time_s"
+      ,13 => {  name => "minizinc.solve_time_s"
                ,format => '%6.2f'
                ,print => 1
                ,comment => "time spent solving in seconds. Cannot be larger than 'limit_s', but can be smaller" }
-      ,11 => {  name => "minizinc.solutions"
+      ,14 => {  name => "minizinc.solutions"
                ,format => '%4d'
                ,print => 1
                ,comment => "number of solutions found during optimization. If this is 0, it's a bust!" }
-      ,12 => {  name => "minizinc.variables"
+      ,15 => {  name => "minizinc.variables"
                ,format => '%4d'
                ,print => 1
                ,comment => "number of variables created from the problem statement" }
-      ,13 => {  name => "minizinc.propagators"
+      ,16 => {  name => "minizinc.propagators"
                ,format => '%4d'
                ,print => 1
                ,comment => "number of propagators" }
-      ,14 => {  name => "minizinc.propagations"
+      ,17 => {  name => "minizinc.propagations"
                ,format => '%8d'
                ,print => 1
                ,comment => "number of propagator invocations" }
-      ,15 => {  name => "minizinc.nodes"
+      ,18 => {  name => "minizinc.nodes"
                ,format => '%8d'
                ,print => 1
                ,comment => "number of search nodes" }
-      ,16 => {  name => "minizinc.failures"
+      ,19 => {  name => "minizinc.failures"
                ,format => '%8d'
                ,print => 1
                ,comment => "number of leaf nodes that were failed" }
-      ,17 => {  name => "minizinc.restarts"
+      ,20 => {  name => "minizinc.restarts"
                ,format => '%4d'
                ,print => 1
                ,comment => "number of times the solver restarted the search (jumped back to the root search node)" }
-      ,18 => {  name => "minizinc.peak_depth"
+      ,21 => {  name => "minizinc.peak_depth"
                ,format => '%4d'
                ,print => 1
                ,comment => "peak depth of search tree reached" }
-      ,19 => {  name => "minizinc.num_solutions"
+      ,22 => {  name => "minizinc.num_solutions"
                ,format => '%2d'
                ,print => 1
                ,comment => "the 'nSolutions' value, probably 'number of solutions output'" }

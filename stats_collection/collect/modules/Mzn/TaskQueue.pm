@@ -1,16 +1,12 @@
 #!/usr/bin/perl
 
-######
-# A module for a program which runs MiniZinc repeatedly on the same model with
-# different data files and different search annotations (to apply different
-# variable selection strategies and domain splitting strategies), and collects
-# information about the run in a CSV file
-#
-# This module deals with setting up the "task queue" and some extras.
+###############################################################################
+# This module deals with setting up the "task queue", where each task describes
+# a MiniZinc process to be executed.
 #
 # The homepage for this script with additional explanation is at
 # https://github.com/dtonhofer/minizinc_experiments/tree/main/stats_collection
-######
+###############################################################################
 
 package Mzn::TaskQueue;
 
@@ -22,6 +18,7 @@ use YAML::Tiny;     # install with "dnf install perl-YAML-Tiny"
 use Data::Dumper;   # install with "dnf install perl-Data-Dumper"
 use File::Basename;
 use Fcntl qw(:flock SEEK_END);
+use Mzn::Helpers qw(is_hashref is_arrayref is_nonref);
 
 use Exporter qw(import);
 our @EXPORT_OK =
@@ -42,15 +39,10 @@ sub build_task_queue {
    my($args) = @_;
    my $task_queue = [];
    my $known_modelfiles = $$args{modelfiles};
-   die "'known_modelfiles' should be an array" unless (ref $known_modelfiles eq ref []);
-   if (@$known_modelfiles == 0) {
-      print STDERR "No modelfiles!\n"
-   }
+   die "'known modelfiles' should be an array" unless is_arrayref($known_modelfiles);
+   die "'known modelfiles' should be nonempty" unless (@$known_modelfiles > 0);
    for my $modelfile (sort @$known_modelfiles) {
       btq_at_modelfile($task_queue,$modelfile,$args);
-   }
-   if ($$args{debug_config}) {
-      print STDERR "There are " . scalar(@$task_queue) . " entries in the task queue!\n";
    }
    return $task_queue
 }
@@ -58,10 +50,8 @@ sub build_task_queue {
 sub btq_at_modelfile {
    my($task_queue,$modelfile,$args) = @_;
    my $known_datafiles = $$args{datafiles};
-   die "'known_datafiles' should be a hash" unless (ref $known_datafiles eq ref {});
-   if (%$known_datafiles == 0) {
-      print STDERR "No datafiles!\n"
-   }
+   die "'known datafiles' should be a hash" unless is_hashref($known_datafiles);
+   die "'known datafiles' should be nonempty" unless (%$known_datafiles > 0);
    for my $datafile (sort keys %$known_datafiles) {
       btq_at_datafile($task_queue,$modelfile,$datafile,$args,"(" . basename($modelfile) . " + " . basename($datafile) . ")")
    }
@@ -69,58 +59,69 @@ sub btq_at_modelfile {
 
 sub btq_at_datafile {
    my($task_queue,$modelfile,$datafile,$args,$loc) = @_;
-   my $known_datafiles    = $$args{datafiles};
+   my $known_datafiles = $$args{datafiles};
    my $applicable_configs = $$known_datafiles{$datafile};
-   die "'applicable_configs' should be an array" unless (ref $applicable_configs eq ref []);
-   if (@$applicable_configs == 0) {
-      print STDERR "No applicable configs for $loc!\n"
-   }
+   die "'applicable configs' of '$datafile' should be an array" unless is_arrayref($applicable_configs);
+   die "'applicable configs' of '$datafile' should be nonempty" unless (@$applicable_configs > 0);
+   my $known_configs = $$args{configs};
+   die "'known configs' should be a hash" unless is_hashref($known_configs);
+   die "'known configs' should be nonempty" unless (%$known_configs > 0);
    for my $config_name (sort @$applicable_configs) {
-      my $known_configs = $$args{configs};
-      my $config        = $$known_configs{$config_name};
-      die "No config for '$config_name'" unless defined $config;
-      btq_at_config($task_queue,$modelfile,$datafile,$config,$args,"$loc/$config_name")
+      my $config = $$known_configs{$config_name};
+      die "No config with name '$config_name' exists" unless defined $config;
+      die "Config with name '$config_name' should be a hash" unless is_hashref($config);
+      die "Config with name '$config_name' should be nonempty" unless (%$config > 0);
+      btq_at_config($task_queue,$modelfile,$datafile,$config_name,$config,$args,"$loc/$config_name")
    }
 }
 
 sub btq_at_config {
-   my($task_queue,$modelfile,$datafile,$config,$args,$loc) = @_;
-   # Just need to look at the strategies for the configuration, as all the information about
-   # defaults and annotations has been "flattened" into each strategy during YAML interpretation.
-   my $strategies = $$config{strategies};
-   die "'strategies' should be a hash" unless (ref $strategies eq ref {});
-   if (%$strategies == 0) {
-      print STDERR "No strategies for $loc!\n"
-   }
-   for my $strategy_name (sort keys %$strategies) {
-      my $strategy = $$strategies{$strategy_name};
-      btq_at_strategy($task_queue,$modelfile,$datafile,$strategy,$args,"$loc/$strategy_name")
+   my($task_queue,$modelfile,$datafile,$config_name,$config,$args,$loc) = @_;
+   # We just need to look at the "applications" for the configuration, as all the information about
+   # defaults and annotations has been "flattened" into each application during YAML interpretation.
+   my $applications = $$config{applications};
+   die "No applications found in '$loc'" unless defined $applications;
+   die "Applications in '$loc' should be a hash" unless is_hashref($applications);
+   die "Applications in '$loc' should be nonempty" unless (%$applications > 0);
+   for my $application_name (sort keys %$applications) {
+      my $application = $$applications{$application_name};
+      btq_at_application($task_queue,$modelfile,$datafile,$config_name,$application_name,$application,$args,"$loc/$application_name")
    }
 }
 
-sub btq_at_strategy {
-   my($task_queue,$modelfile,$datafile,$strategy,$args,$loc) = @_;
-   my $rounds = $$strategy{rounds};
+sub btq_at_application {
+   my($task_queue,$modelfile,$datafile,$config_name,$application_name,$application,$args,$loc) = @_;
+   my $rounds = $$application{rounds};
+   die "Rounds must be defined in '$loc'" unless defined $rounds;
    if ($rounds <= 0) {
-      print STDERR "No rounds for $loc!\n"
+      print STDERR "No rounds for '$loc' as rounds = $rounds!\n"
    }
    for (my $round = 1; $round <= $rounds; $round++) { # 1-based for once
-      my $base_df = basename($datafile);
-      my $base_mf = basename($modelfile);
-      if ($base_df =~ /^(.+)\.dzn$/) { $base_df = $1 }
-      if ($base_mf =~ /^(.+)\.mzn$/) { $base_mf = $1 }
-      push @$task_queue,
-         {  modelfile     => $modelfile
-           ,datafile      => $datafile
-           ,resultfile    => $$args{resultfile}
-           ,base_mf       => $base_mf
-           ,base_df       => $base_df
-           ,round         => $round
-           ,rounds        => $rounds
-           ,ann_name      => $$strategy{ann_name}
-           ,annotation    => $$strategy{annotation}
-           ,limit_s       => $$strategy{limit_s}
-           ,obj_name      => $$strategy{obj_name} }
+      my $modelfile_base  = basename($modelfile);
+      my $datafile_base   = basename($datafile);
+      if ($modelfile_base =~ /^(.+)\.mzn$/) { $modelfile_base = $1 }
+      if ($datafile_base  =~ /^(.+)\.dzn$/) { $datafile_base = $1 }
+      my $flattened = {
+          modelfile        => $modelfile
+         ,datafile         => $datafile
+         ,config_name      => $config_name
+         ,application_name => $application_name
+         ,resultfile       => $$args{resultfile}
+         ,modelfile_base   => $modelfile_base
+         ,datafile_base    => $datafile_base
+         ,round            => $round
+         ,rounds           => $rounds
+         ,limit_s          => $$application{limit_s}
+         ,objval_name      => $$application{objval_name} };
+      if (exists $$application{annotations}) {
+         my $annotations = $$application{annotations};
+         for my $type ("search", "restart") {
+            if (exists $$annotations{$type}) {
+               $$flattened{$type} = $$annotations{$type}
+            }
+         }
+      }
+      push @$task_queue, $flattened;
    }
 }
 

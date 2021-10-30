@@ -1,16 +1,14 @@
 #!/usr/bin/perl
 
-######
-# A module for a program which runs MiniZinc repeatedly on the same model with
-# different data files and different search annotations (to apply different
-# variable selection strategies and domain splitting strategies), and collects
-# information about the run in a CSV file
-#
-# This module deals with running MiniZinc and collecting results.
+###############################################################################
+# Run MiniZinc repeatedly on the same modelfile with different datafiles and
+# different search annotations (so as to apply different variable selection
+# strategies and domain splitting strategies), and collect information about
+# each run in a CSV file.
 #
 # The homepage for this script with additional explanation is at
 # https://github.com/dtonhofer/minizinc_experiments/tree/main/stats_collection
-######
+###############################################################################
 
 package Mzn::Forking;
 
@@ -19,12 +17,11 @@ use strict;
 use utf8;  # Meaning "This lexical scope (i.e. file) contains utf8"
 
 use Data::Dumper; # install with "dnf install perl-Data-Dumper"
-use File::Temp qw(tempfile tempdir);
+use File::Spec;
 use List::Util qw(max min);
 use POSIX qw(strftime);
 
-use Mzn::ResultFiling
-   qw(write_to_resultfile);
+use Mzn::ResultFiling qw(write_to_resultfile);
 
 use Exporter qw(import);
 our @EXPORT_OK =
@@ -116,24 +113,27 @@ sub fork_child_process {
 sub fork_minizinc {
    my($task,$logs_dir,$add_cmdline_to_logs,$keep_logs,$debug_results) = @_;
 
-   my $datafile       = $$task{datafile};    die "Data file '$datafile' does not exist" unless -e $datafile;
-   my $modelfile      = $$task{modelfile};   die "Model file '$modelfile' does not exist" unless -e $modelfile;
-   my $resultfile     = $$task{resultfile};  die "Result file '$resultfile' does not exist" unless -e $resultfile;
-   my $base_df        = $$task{base_df};     die "Base for datafile is unset" unless $base_df;   # For naming the result line
-   my $base_mf        = $$task{base_mf};     die "Base for modelfile is unset" unless $base_mf;  # For naming the result line
-   my $round          = $$task{round};       die "Round is unset" unless defined $round; # For naming the result line
-   my $rounds         = $$task{rounds};      die "Rounds is unset" unless defined $rounds; # For naming the result line
-   my $annotation     = $$task{annotation};  die "Annotation is unset" unless defined $annotation; # TODO: We may need no annotation!
-   my $ann_name       = $$task{ann_name};    die "Annotation name is unset" unless defined $ann_name; # TODO: We may need no annotation!
-   my $obj_name       = $$task{obj_name};    die "Objective value name is unset" unless defined $ann_name;
-   my $limit_s        = $$task{limit_s};     # Could be unset
+   my $modelfile      = $$task{modelfile};   die "Model file '$modelfile' does not exist" unless -f $modelfile;
+   my $datafile       = $$task{datafile};    die "Data file '$datafile' does not exist" unless -f $datafile;
+   my $limit_s        = $$task{limit_s};     die "Limit is unset" unless defined $limit_s;
+   my $ann_search     = $$task{search};      # may be unset, otherwise a hash with name and value
+   my $ann_restart    = $$task{restart};     # may be unset, otherwise a hash with name and value
 
-   my ($fh_out,$filename_out,$fh_err,$filename_err) = create_tempfiles($base_mf,$base_df,$round,$logs_dir);
+   my $cmdline = build_minizinc_cmdline($modelfile,$datafile,$ann_search,$ann_restart,$limit_s);
 
-   my $cmdline = build_minizinc_cmdline($modelfile,$datafile,$ann_name,$annotation,$limit_s);
+   my $config_name      = $$task{config_name};      die "Configuration name is unset" unless $config_name;
+   my $application_name = $$task{application_name}; die "Application name is unset" unless $application_name;
+   my $resultfile       = $$task{resultfile};       die "Result file '$resultfile' does not exist" unless -f $resultfile;
+   my $modelfile_base   = $$task{modelfile_base};   die "Base for modelfile is unset" unless $modelfile_base;  # For naming the result line
+   my $datafile_base    = $$task{datafile_base};    die "Base for datafile is unset" unless $datafile_base;   # For naming the result line
+   my $round            = $$task{round};            die "Round is unset" unless defined $round;         # For naming the result line
+   my $rounds           = $$task{rounds};           die "Rounds is unset" unless defined $rounds;       # For naming the result line
+   my $objval_name      = $$task{objval_name};      die "Objective value name is unset" unless defined $objval_name;
 
-   write_header_comment($fh_out,$task,"$ann_name = $annotation",$limit_s);
-   write_header_comment($fh_err,$task,"$ann_name = $annotation",$limit_s);
+   my ($fh_out,$filename_out,$fh_err,$filename_err) = create_logfiles($modelfile_base,$datafile_base,$config_name,$application_name,$round,$logs_dir);
+
+   write_header_comment($fh_out,$task);
+   write_header_comment($fh_err,$task);
 
    if ($add_cmdline_to_logs) {
       write_cmdline($fh_out,$cmdline);
@@ -162,27 +162,31 @@ sub fork_minizinc {
 
    process_system_retval_and_maybe_exit($retval);
 
-   my $mzn_res = extract_solution_and_stats($filename_out,$obj_name);
+   my $sol;
+   my $mzn;
+   my $around;
+   my $seq;
 
-   # TODO: Flexibilize this. Currently only useful for a specific MiniZinc model
-   extract_sequence($filename_out,$obj_name,$mzn_res);
-
-   $$mzn_res{around} = {
-       duration_s => ($end-$start)
-      ,limit_s    => $limit_s
-   };
-
-   if ($debug_results) {
-      print STDERR Data::Dumper->new([$mzn_res])->Sortkeys(1)->Dump;
+   {
+      ($sol,$mzn) = extract_solution_and_stats($filename_out,$objval_name);
+      $around = { duration_s => ($end-$start) , limit_s => $limit_s };
+      # TODO: Flexibilize this.
+      # Currently only useful for a specific MiniZinc model, namely one
+      # in which the objval_id is printed followed by a (nameless) array of integers
+      $seq = extract_sequence($filename_out,$objval_name,$mzn)
    }
 
-   write_to_resultfile_outer($mzn_res,$task);
+   if ($debug_results) {
+      print STDERR Data::Dumper->new({sol => $sol, mzn => $mzn,around => $around,seq => $seq})->Sortkeys(1)->Dump;
+   }
+
+   write_to_resultfile_outer($task,$sol,$mzn,$around);
 
    # If all went well, delete the files that captured stdout and stderr
 
    if ($keep_logs) {
       open(my $fh, '>>', $filename_out) or die "Could not open '$filename_out' for writing";
-      print $fh Data::Dumper->new([$mzn_res])->Sortkeys(1)->Dump . "\n";
+      print $fh Data::Dumper->new([$mzn])->Sortkeys(1)->Dump . "\n";
       close($fh);
    }
    else {
@@ -191,48 +195,105 @@ sub fork_minizinc {
    }
 }
 
-# Use https://perldoc.perl.org/File::Temp to create files
-# in directory "logs" to cpature stderr and stdout of MiniZinc
-# process.
-
-sub create_tempfiles {
-   # Need at least 4 X as "random char placeholder", can we get rid of those
-   my($base_mf,$base_df,$round,$logs_dir) = @_;
-   my $tempfile_pattern = "${base_mf}_${base_df}_${round}_XXXX";
-   (my ($fh_out, $filename_out) =
-      tempfile( $tempfile_pattern ,
-                SUFFIX => ".out",
-                DIR => $logs_dir )) ||
-      die "Could not create temp file: $!";
-   (my ($fh_err, $filename_err) =
-      tempfile( $tempfile_pattern ,
-                SUFFIX => ".err",
-                DIR => $logs_dir )) ||
-      die "Could not create temp file: $!";
-   # print STDERR "Filename_out = $filename_out\n";
-   # print STDERR "Filename_err = $filename_err\n";
+sub create_logfiles {
+   my($modelfile_base,$datafile_base,$config_name,$application_name,$round,$logs_dir) = @_;
+   my $filename_base = "${modelfile_base}_${datafile_base}_${config_name}_${application_name}_${round}";
+   my $filename_out = File::Spec->catfile($logs_dir,"${filename_base}.out");
+   my $filename_err = File::Spec->catfile($logs_dir,"${filename_base}.err");
+   my $fh_out;
+   my $fh_err;
+   open($fh_out,">",$filename_out) or die "Could not create logfile '$filename_out' for writing: $!";
+   open($fh_err,">",$filename_err) or die "Could not create logfile '$filename_err' for writing: $!";
    binmode( $fh_out, ":utf8" );
    binmode( $fh_err, ":utf8" );
    return ($fh_out, $filename_out, $fh_err, $filename_err)
 }
 
-# The cmdline is an array that will be given to Perl's "system" call
+# The "cmdline" is an array that will be given to Perl's "system" call
+# which forks a new child process and that process then execs the given
+# program (i.e. "minizinc", which must be on the path) with the given
+# argument vector (this does not pass through a shell interpreter)
+#
 # https://www.minizinc.org/doc-2.5.5/en/command_line.html
 # https://perldoc.perl.org/functions/system
+#
+# For predefined commandline options "known to Gecode" (i.e. known
+# to a program that uses the "script commandline driver" provided
+# by the Gecode library), see the Gecode manual "Modeling and
+# Programming with Gecode" on page 198 of https://www.gecode.org/doc-latest/MPG.pdf
+#
+# The passed $params is a hash, which contains:
+#
+# limit_s
+# -------
+# maps to an integer > 0 the "cutoff time in seconds".
+# This needs to be transformed to milliseconds for gecode.
+#
+# If "limit_s" is missing (it should not) or its value is <= 0, then we have
+# "no cutoff" i.e. the search continues until the whole tree has been traversed.
+#
+# ann_search
+# ----------
+# A subhash with:
+#
+# name  : name of the search annotation in the model file
+# value : full text of the annotation
+#
+# If "ann_search" is missing, then we assume that there is no search
+# annotation placeholder to be filled in in the model file.
+#
+# ann_restart
+# -----------
+# A subhash with:
+#
+# name  : name of the search annotation in the model file
+# value : full text of the annotation
+#
+# If "ann_restart" is missing, then we assume that there is no search
+# annotation placeholder to be filled in in the model file.
+# Note that the same effect can be achieved by setting "value" to
+# "restart_none".
+# Alternatively, one can use specialized gecode parameters to
+# configure restarts, -restart, -restart-scale and -restart-base.
 
 sub build_minizinc_cmdline {
-   my($modelfile,$datafile,$ann_name,$annotation,$limit_s) = @_;
+   my($modelfile,$datafile,$ann_search,$ann_restart,$limit_s) = @_;
+   die "Modelfile must be given" unless $modelfile;
+   die "Datafile must be given" unless $datafile;
    my $cmdline = [
-      "minizinc",                                       # must be on path
-      "--statistics",
-      "--solver"         , "Gecode",                    # TODO: parametrize
-      "--model"          , $modelfile,
-      "--data"           , $datafile,
-      "--cmdline-data"   , "$ann_name = $annotation"
+      "minizinc"
+      , "--statistics"
+      , "--solver"    , "Gecode"
+      , "--model"     , $modelfile
+      , "--data"      , $datafile
    ];
-   # TODO: How to pass "restart" to gecode here?
-   maybe_add_time_limit_parameter($cmdline,$limit_s);
+   maybe_add_gecode_time_limit_parameter($cmdline,$limit_s);
+   maybe_add_annotation($cmdline,$ann_search,"search");
+   maybe_add_annotation($cmdline,$ann_restart,"restart");
    return $cmdline
+}
+
+sub maybe_add_annotation {
+   my($cmdline,$ann,$type) = @_;
+   my($set,$name,$value) = extract_annotation($ann,$type);
+   if ($set) {
+      push @$cmdline, "--cmdline-data", "$name = $value";
+   }
+}
+
+sub extract_annotation {
+   my($ann,$type) = @_;
+   my $name;
+   my $value;
+   my $set = 0;
+   if (defined $ann && %$ann > 0) {
+      $name = $$ann{name};
+      $value = $$ann{value};
+      $set = 1;
+      die "Name of $type annotation is not defined" unless $name;
+      die "Value of $type annotation is not defined" unless $value
+   }
+   return ($set,$name,$value)
 }
 
 # Add a tuple for the "time limit" parameter to the cmdline
@@ -250,23 +311,44 @@ sub build_minizinc_cmdline {
 # Programming with Gecode", available here:
 # https://www.gecode.org/doc/6.2.0/reference/index.html
 
-sub maybe_add_time_limit_parameter {
+sub maybe_add_gecode_time_limit_parameter {
    my($cmdline,$limit_s) = @_;
-   if (defined($limit_s) && $limit_s > 0) {
-      my $val_ms = max(1000,$limit_s*1000); # at least 1000 ms
+   if (defined $limit_s && $limit_s*1 > 0) {
+      my $val_ms = int($limit_s*1000);
+      # Old school (works)
       push @$cmdline, "--fzn-flags" , "--time $val_ms";
-      # push @$cmdline, "--time", "$val_ms"; # not actually working
+      # New school (not working!)
+      #   N.B. "-time" (a mix between 'long options' and POSIX 'single dash')
+      #   not "--time" (double dash GNU convention for 'long options')
+      # push @$cmdline, "-time", "$val_ms";
    }
 }
 
 sub write_header_comment {
-   my($fh,$task,$ann_desc,$limit_s) = @_;
-   print $fh "% now        = " . strftime("%F %T", localtime time) . "\n";
-   print $fh "% modelfile  = $$task{modelfile}\n";
-   print $fh "% datafile   = $$task{datafile}\n";
-   print $fh "% round      = $$task{round} of $$task{rounds}\n";
-   print $fh "% limit_s    = $limit_s\n";
-   print $fh "% annotation = $ann_desc\n";
+   my($fh,$task) = @_;
+   my $modelfile        = $$task{modelfile};
+   my $datafile         = $$task{datafile};
+   my $limit_s          = $$task{limit_s};
+   my $ann_search       = $$task{search};
+   my $ann_restart      = $$task{restart};
+   my $config_name      = $$task{config_name};
+   my $application_name = $$task{application_name};
+   my $round            = $$task{round};
+   print $fh "% now         : " . strftime("%F %T", localtime time) . "\n";
+   print $fh "% modelfile   : $modelfile\n";
+   print $fh "% datafile    : $datafile\n";
+   print $fh "% config      : $config_name\n";
+   print $fh "% application : $application_name\n";
+   print $fh "% limit_s     : $limit_s\n";
+   print $fh "% round       : $$task{round} of $$task{rounds}\n";
+   if ($ann_search) {
+      print $fh "% search annotation name   : $$ann_search{name}\n";
+      print $fh "% search annotation value  : $$ann_search{value}\n"
+   }
+   if ($ann_restart) {
+      print $fh "% restart annotation name  : $$ann_restart{name}\n";
+      print $fh "% restart annotation value : $$ann_restart{value}\n"
+   }
 }
 
 sub write_cmdline {
@@ -274,7 +356,7 @@ sub write_cmdline {
    print $fh "% ";
    for my $str (@$cmdline) {
       print $fh " ";
-      if ($str =~ /[\s\"]/) {  # an attempt at quoting
+      if ($str =~ /[\s\"]/) {  # a vague attempt at quoting
          print $fh "'$str'";
       }
       else {
@@ -308,28 +390,23 @@ sub process_system_retval_and_maybe_exit {
 # data will be stored directly in the "res" hash.
 #
 # The program objective value is expected on a single line
-# <obj_name> = <numeric>;
+# <objval_id> = <numeric>;
 # This could be flexibilized!
 
 sub extract_solution_and_stats {
-   my($file,$obj_name) = @_;
+   my($file,$objval_name) = @_;
    open(my $fh,"<",$file) || die "Could not open file '$file' for reading: $!";
-   my $res = {};
-   $$res{solution} = {};
-   $$res{minizinc} = {};
-   my $mzn = $$res{minizinc};
-   my $sol = $$res{solution};
+   my $mzn = {};
+   my $sol = {};
    while (my $line = <$fh>) {
       chomp $line;
-
-      if ($line =~ /^\s*${obj_name}\s*=\s*([\d\.]+)\s*;?\s*$/) {
+      if ($line =~ /^\s*${objval_name}\s*=\s*([\d\.]+)\s*;?\s*$/) {
          my $numeric = $1*1;
-         print STDERR "Found $obj_name = $1 in '$line'; numeric: $numeric\n";
-         $$sol{obj_value} = $numeric;
-         $$sol{obj_name}  = $obj_name;
+         print STDERR "Found $objval_name = $1 in '$line'; converted to numeric: $numeric\n";
+         $$sol{objval_value} = $numeric;
+         $$sol{objval_name}  = $objval_name;
          next
       }
-
       if ($line =~ /^%%%mzn-stat: initTime=([\d\.]+)\s*$/)     { $$mzn{init_time_s}   = $1*1 ; next }
       if ($line =~ /^%%%mzn-stat: solveTime=([\d\.]+)\s*$/)    { $$mzn{solve_time_s}  = $1*1 ; next }
       if ($line =~ /^%%%mzn-stat: solutions=(\d+)\s*$/)        { $$mzn{solutions}     = $1*1 ; next }
@@ -343,7 +420,7 @@ sub extract_solution_and_stats {
       if ($line =~ /^%%%mzn-stat: nSolutions=(\d+)\s*$/)       { $$mzn{num_solutions} = $1*1 ; next }
    }
    close($fh);
-   return $res
+   return ($sol,$mzn);
 }
 
 sub parse_sequence {
@@ -364,18 +441,28 @@ sub parse_sequence {
    return $res
 }
 
+# Very specific to this output generation:
+#
+# output ["makespan = ", show(makespan), "\n" ] ++
+#        [ show_int(3,s[t]) ++ " "
+#        | t in TASK];
+#
+# The objval_id (in this case, "makespan") is only passed because we need
+# to look for the line following its occurrence.
+
 sub extract_sequence {
-   my($fq_file,$obj_name,$res) = @_;
-   open(my $fh,"<",$fq_file) || die "Could not open file '$fq_file': $!";
+   my($file,$objval_name,$res) = @_;
+   open(my $fh,"<",$file) || die "Could not open file '$file': $!";
+   my $seq;
    my $expect_sequence = 0;
    while (my $line = <$fh>) {
       chomp $line;
       if ($expect_sequence) {
-         $$res{solution}{sequence} = parse_sequence($line);
+         $seq = parse_sequence($line);
          $expect_sequence = 0;
       }
       else {
-         if ($line =~ /^\s*${obj_name}\s*=\s*([\d\.]+)\s*;?\s*$/) {
+         if ($line =~ /^\s*${objval_name}\s*=\s*([\d\.]+)\s*;?\s*$/) {
             # The sequence is expected to come after the "obj" line
             $expect_sequence = 1;
             next
@@ -383,22 +470,23 @@ sub extract_sequence {
       }
    }
    close($fh);
+   return $seq
 }
 
+# write out a CSV line for a hash keyed up as defined in get_resultfile_line()
+
 sub write_to_resultfile_outer {
-   my($data,$task) = @_;
-   my $around   = $$data{around};
-   my $mzn      = $$data{minizinc};
-   my $solution = $$data{solution};
+   my($task,$sol,$mzn,$around) = @_;
    my $result = {
-       model                    => $$task{base_mf}
-      ,data                     => $$task{base_df}
+       model                    => $$task{modelfile_base}
+      ,data                     => $$task{datafile_base}
+      ,config_name              => $$task{config_name}
+      ,application_name         => $$task{application_name}
       ,round                    => $$task{round}
       ,rounds                   => $$task{rounds}
       ,limit_s                  => $$around{limit_s}
-      ,annotation               => $$task{annotation}
       ,duration_s               => $$around{duration_s}
-      ,obj                      => $$solution{obj_value}
+      ,obj                      => $$sol{objval_value}
       ,'minizinc.init_time_s'   => $$mzn{init_time_s}
       ,'minizinc.solve_time_s'  => $$mzn{solve_time_s}
       ,'minizinc.solutions'     => $$mzn{solutions}
@@ -411,6 +499,14 @@ sub write_to_resultfile_outer {
       ,'minizinc.peak_depth'    => $$mzn{peak_depth}
       ,'minizinc.num_solutions' => $$mzn{num_solutions}
    };
+   {
+      my ($set,$name,$value) = extract_annotation($$task{search},"search");
+      $$result{search} = ($set ? $value : "NA");
+   }
+   {
+      my ($set,$name,$value) = extract_annotation($$task{restart},"restart");
+      $$result{restart} = ($set ? $value : "NA");
+   }
    # writer dies on error
    write_to_resultfile($$task{resultfile},$result);
 }
