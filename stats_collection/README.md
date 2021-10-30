@@ -85,9 +85,9 @@ If the file `result.txt` already exists when `collect_result.perl` is started,
 it is renamed by adding an integer index. This avoids accidental destruction
 of data that might have taken a few hours to collect.
 
-## Configuration: collect.cfg
+## Configuration file
 
-`explained.cfg` is a [YAML](https://en.wikipedia.org/wiki/YAML) file that specifies what
+The file `explained.cfg` is a [YAML](https://en.wikipedia.org/wiki/YAML) file that specifies what
 `collect.perl` should do: which model files and data files it should process how and
 what the parameters should be set to. It is rather self-explanatory.
 
