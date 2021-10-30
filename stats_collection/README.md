@@ -158,7 +158,7 @@ Refer to [Statistics Output](https://www.minizinc.org/doc-2.5.5/en/fzn-spec.html
 - `peak_depth`: Peak depth of search tree reached. (In this case, `prepare14` reaches 1300.)
 - `num_solutions`: The `nSolutions` value, this should be the "number of solutions output". It think.
 
-## Search Strategy Annotations 
+## Search Strategies
 
 There is a set of keywords for "variable selection strategy" (VSS, what variable to select next during search), called "varchoiceannotation" or
 "value choice strategy" in the MiniZinc manual, as well as a set for "domain # splitting strategy" (DSS, how to constrain the domain on the left
@@ -208,7 +208,7 @@ A variable's domain is always split in two. Thus the search tree is a binary tre
 - `indomain_reverse_split`: bisect the variable’s domain, excluding the lower half first.
 - `indomain_interval`: if the variable’s domain consists of several contiguous intervals, reduce the domain to the first interval. Otherwise just split the variable’s domain.
 
-## Restart Strategies Annotations 
+## Restart Strategies
 
 The "restart" annotation is simpler than the "search" annotation and does not use keywords for configuration, just integers and floats. 
 The following are known:
