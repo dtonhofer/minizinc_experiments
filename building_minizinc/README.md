@@ -1,7 +1,7 @@
 # Building the MiniZinc libraries and tools + associated solvers
 
 While the **official documentation** about building MiniZinc from source can be found in the MiniZinc manual under
-[Installation from Source Code](https://www.minizinc.org/doc-2.5.5/en/installation_detailed.html), this
+[Installation from Source Code](https://docs.minizinc.dev/en/stable/installation_detailed.html), this
 directory contains my notes on how to build:
 
 - The "Gecode" solver libraries and tools: [Building Gecode](building_gecode.md)
