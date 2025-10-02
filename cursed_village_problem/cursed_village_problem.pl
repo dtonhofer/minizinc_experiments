@@ -1,9 +1,10 @@
 % ---
-% Solve the "Cursed Village" / "Sick Children" / "Constellations and Baguas" 
+% Solve the "Cursed Village" / "Sick Children" / "Constellations and Baguas"
 % problem from the Coursera Course "Solving Algorithms for Discrete Optimization"
-% https://www.coursera.org/learn/solving-algorithms-discrete-optimization/lecture/hCiWy/3-1-4-propagation-engine
 % by the The Chinese University of Hong Kong
 % presented by Professors Peter James Stucky and Jimmy Ho Man Lee.
+% at
+% https://www.coursera.org/learn/solving-algorithms-discrete-optimization/lecture/hCiWy/3-1-4-propagation-engine
 %
 % but:
 %
@@ -14,65 +15,75 @@
 %
 % This code runs in SWI-Prolog 9.3.5.
 %
+% A MiniZinc program, which however is defined so that a solution necessarily
+% has "bagua sets" of size 1, is given in the course material at
+%
+% https://github.com/MiniZinc/specialization-examples/blob/master/CP/propagation_engine/village.mzn
+%
+% A "bagua" is a Chinese term meaning "eight symbols," representing a set of eight
+% trigrams used in Taoist cosmology and Feng Shui (a 3-bit code, really).
+%
 % Problem statement:
 %
-% - We have 8 bagua powers.
-% - We have 28 constellation.
-% - Each constellation is associated with a nonempty set of bagua powers
-%   i.e. is associated to an element of the powerset of bagua powers that is
-%   not the empty set.
-% - We have the healer Shennongshi who can actually remove bagua powers
-%   from the constellations.
-% - We have 25 male children and 10 female children.
+% - We have 8 baguas.
+% - We have 28 constellations.
+% - Each constellation is associated with a nonempty set of baguas
+%   i.e. is associated to an element of the powerset of baguas that is
+%   however not the empty set.
+% - We have the healer Shennongshi who can actually remove baguas
+%   from the constellations by unspecified means.
+% - We have 25 male children and 10 female children living in teh cursed village.
 % - Each child is associated to two constellations, labeled the child's
 %   "major constellation" and the child's "minor constellation".
-%   This means that the child is associated to two set of bagua powers,
-%   which we can call his/her "major baguas power" and "minor baguas powers". 
-% - A child is at risk of becoming sick if:
-%   - It is a male and there is a pair of bagua powers (a,b)
-%     where "a" has been chosen from the child's "major bagua powers"
-%     and "b" has been chosen from the child's "minor bagua powers"
-%     such that (a,b) NOT appear in a fixed set of allowed pairs called the
-%     "book of changes".
-%   - It is a female and there is a bagua power "c" which appears in
-%     both her "major bagua powers" and "minor bagua powers" (i.e. the
-%     the major and minor bagua powers do not form disjoint sets).
-% - Task: Remove bagua powers from the constellations (whithout 
+%   This means that the child is associated to two set of baguas,
+%   which we can call the "major baguas" and "minor baguas".
+% - A child is at risk of becoming sick due to a curse on the village if:
+%   - The child is a male and there is a pair of baguas (a,b)
+%     where "a" has been chosen from the child's "major baguas"
+%     and "b" has been chosen from the child's "minor baguas"
+%     such that (a,b) does NOT appear in a fixed set of allowed pairs
+%     called the "book of changes".
+%   - The child is a female and there is a bagua "c" which appears in
+%     both her "major baguas" and "minor baguas" (i.e. if the
+%     the major and minor baguas do not form disjoint sets).
+%
+% - Shennongshi's task: Remove baguas from the constellations (whithout
 %   going so far as getting the empty set) so that none of the children
-%   are at risk of becoming sick. A resulting association of 
-%   constellations to sets of bagua power sets obtained from the original
-%   bagua power sets by element removal is a solution.
+%   are at risk of becoming sick.
+%   A resulting association of constellations to bagua sets that are subsets
+%   of the original bagua sets is a solution.
 %
-% The first solution output is this one, more can be found by backtracking:
+% The first solution "constellation -> bagua set" is this one, more can be
+% found by backtracking:
 %
-% ape : [marsh,mountain,water]
-% bat : [earth,fire,heaven,marsh,mountain,wind]
-% bird : [earth]
-% chicken : [earth,heaven,mountain]
+% ape             : [marsh,mountain,water]
+% bat             : [earth,fire,heaven,marsh,mountain,wind]
+% bird            : [earth]
+% chicken         : [earth,heaven,mountain]
 % chinese_unicorn : [heaven,mountain,thunder,wind]
-% cow : [fire,thunder]
-% deer : [fire,marsh,mountain]
-% devil : [wind]
-% dog : [mountain]
-% earth_worm : [fire,heaven,marsh]
-% flood_dragon : [earth,fire,marsh,water]
-% fox : [wind]
-% gold_dragon : [wind]
-% hare : [fire,marsh,mountain,thunder,wind]
-% horse : [fire,heaven,marsh,thunder]
-% leopard : [earth,heaven,marsh,wind]
-% monkey : [mountain]
-% pheasant : [marsh,water,wind]
-% pig : [marsh,thunder]
-% raccoon : [fire,heaven,marsh,thunder]
-% rat : [heaven]
-% roe_deer : [thunder]
-% sheep : [earth,heaven,thunder,wind]
-% snake : [earth,water]
-% sparrow : [wind]
-% tiger : [fire,heaven,marsh]
-% wild_dog : [earth]
-% wolf : [mountain,thunder]
+% cow             : [fire,thunder]
+% deer            : [fire,marsh,mountain]
+% devil           : [wind]
+% dog             : [mountain]
+% earth_worm      : [fire,heaven,marsh]
+% flood_dragon    : [earth,fire,marsh,water]
+% fox             : [wind]
+% gold_dragon     : [wind]
+% hare            : [fire,marsh,mountain,thunder,wind]
+% horse           : [fire,heaven,marsh,thunder]
+% leopard         : [earth,heaven,marsh,wind]
+% monkey          : [mountain]
+% pheasant        : [marsh,water,wind]
+% pig             : [marsh,thunder]
+% raccoon         : [fire,heaven,marsh,thunder]
+% rat             : [heaven]
+% roe_deer        : [thunder]
+% sheep           : [earth,heaven,thunder,wind]
+% snake           : [earth,water]
+% sparrow         : [wind]
+% tiger           : [fire,heaven,marsh]
+% wild_dog        : [earth]
+% wolf            : [mountain,thunder]
 % ---
 
 :- use_module(library(yall)).
@@ -148,9 +159,9 @@ print_number_of_constellations :-
 
 % ---
 % "Book of changes" lists allowed "bagua pairs" for male children.
-% Each child is associated to two constellations, which are 
+% Each child is associated to two constellations, which are
 % associated to a nonempty set of baguas, and for male children
-% we demand that any ordered pair of baguas selected from the 
+% we demand that any ordered pair of baguas selected from the
 % tow constellations in any order appear in the "book of changes.
 % ---
 
@@ -161,7 +172,7 @@ book_of_changes(water,earth).
 book_of_changes(water,wind).
 book_of_changes(water,marsh).
 book_of_changes(fire,heaven).
-book_of_changes(fire,thunder). % these two are 
+book_of_changes(fire,thunder). % these two are
 book_of_changes(thunder,fire). % symmetric!
 book_of_changes(wind,thunder).
 book_of_changes(wind,mountain).
@@ -237,8 +248,8 @@ verify_every_constellation_appears_exactly_once_in_constellation_baguas :-
    ConstelsSorted == DefConstelsSorted,                % Must be the same.
    format("Every constellation declared appears as first argument in constellation_baguas/2~n"),
    true. % NOP, only exist to able to easily comment-out the previous line
- 
-verify_constellation_baguas :- 
+
+verify_constellation_baguas :-
    % The first argument to constellation_baguas/2 is a 'constellation' atom.
    % The second argument to constellation_baguas/2 is a nonempty set of 'bagua' atoms.
    forall(
@@ -300,7 +311,7 @@ child(deer, sparrow, female).
 child(wolf, wild_dog, female).
 child(ape, devil, female).
 
-verify_children :- 
+verify_children :-
    forall(
       child(MinConstel,MajConstel,Sex),
       (
@@ -314,7 +325,7 @@ verify_children :-
       )
    ),
    bagof([MaC,MiC,Sex],child(MaC,MiC,Sex),Children),
-   is_set(Children).   
+   is_set(Children).
 
 % ---
 % To verify the database
@@ -359,7 +370,7 @@ printout_for_constellation(C,ConstelDict) :-
    get_dict(C,ConstelDict,BaguaOrdSet),
    format("~w : ~w~n", [C,BaguaOrdSet]).
 
-printout(ConstelDict) :- 
+printout(ConstelDict) :-
    bagof(C,constellation(C),DefConstels),      % Collect constellation definitions.
    sort(DefConstels,DefSortedConstels),        % Sort single args of constellation/1.
    forall(
@@ -382,9 +393,9 @@ printout(ConstelDict) :-
 is_safe_2(female,BaguaSet1,BaguaSet2) :-
    ord_disjoint(BaguaSet1,BaguaSet2).
 
-% For males, all the possible ordered pairs 
+% For males, all the possible ordered pairs
 % (major constellation bagua, minor constellation bagua)
-% must be in the book of changes. 
+% must be in the book of changes.
 % The specification is unclear, but in the book of changes, the first position
 % of a pair always corresponds to the MAJOR constellation (the one associated
 % to BaguaSet1) and the second position of a pair always corresponds to the
@@ -421,7 +432,7 @@ is_safe(C1,C2,Sex,ConstelDict) :-
 % ---
 %% collect_males_made_unsafe(
 %%    +ListOfImplicatedConstellations,  input
-%%    +ListOfSafeMalesIn,               input  
+%%    +ListOfSafeMalesIn,               input
 %%    +ConstelDict,                     may or may not be used, see below
 %%    -NewlyUnsafeMels,                 output
 %%    -StillSafeMels)                   output
@@ -472,14 +483,14 @@ reify(Goal, Result) :-
     ).
 
 % ---
-% Adding all the baguas in an "Intersection" set to one or the other of two existing sets, 
+% Adding all the baguas in an "Intersection" set to one or the other of two existing sets,
 % so that the intersection of the extended sets stays disjoint.
 % ---
 
 distribute2(first,I,Set1,Set2,[I|Set1],Set2).
 distribute2(second,I,Set1,Set2,Set1,[I|Set2]).
 distribute2(none,_,Set1,Set2,Set1,Set2).
-      
+
 distribute(Set1,Set2,[],Set1Out,Set2Out) :-
    Set1 \= [], % can't accept an empty set of baguas, backtrack
    Set2 \= [], % can't accept an empty set of baguas, backtrack
@@ -523,7 +534,7 @@ domain_propagation_for_female(Set1,Set2,ReducedSet1,ReducedSet2) :-
 % "compatible" according to the book of changes!
 %
 % This is a fully deterministic operation if we keep to removing the least number of
-% baguas from either set. 
+% baguas from either set.
 % ---
 
 domain_propgation_for_male(Set1,Set2,ReducedSet1,ReducedSet2) :-
@@ -552,7 +563,7 @@ next_reduction_state(Set,NextSet,clean_left_again,done)        :- Set = NextSet.
 next_reduction_state(_,_,clean_left,clean_right).
 
 reduce_till_settled(done,Set1,Set2,Set1,Set2).
- 
+
 reduce_till_settled(State,Set1,Set2,ReducedSet1,ReducedSet2) :-
    member(State,[clean_left,clean_left_again]),
    findall(
@@ -603,7 +614,7 @@ build_list_of_constellations_affected(_,_,false,false,[]).
 %%    -ConstelDictNext           the next mapping "constellation -> bagua set"
 %% )
 %
-% Helper for search/5 to create the next "ConstelDict" and 
+% Helper for search/5 to create the next "ConstelDict" and
 % collect the males rendered UNSAFE under this dict.
 % ---
 
@@ -635,7 +646,7 @@ handle_changed_baguas(C1,C2,ConstelDict,SMels,BaguaSet1,BaguaSet2,BaguaReducedSe
 % the "tentatively SAFE male children" list.
 
 search(ConstelDict,[child(C1,C2,male)|UMels],UFems,SMels,ConstelDictOut) :-
-   is_safe(C1,C2,male,ConstelDict), 
+   is_safe(C1,C2,male,ConstelDict),
    (verbose -> format("Found currently safe male child (~w,~w)~n",[C1,C2]) ; true),
    % create a new list of "currently safe" male children
    SMelsNext = [child(C1,C2,male)|SMels],
@@ -681,7 +692,7 @@ search(ConstelDict,[child(C1,C2,male)|UMels],UFems,SMels,ConstelDictOut) :-
 % condition that the list of UMels (potentially UNSAFE males) is empty.
 % If there is a female child that is SAFE under the current ConstelDict:
 % A female SAFE child will never be made UNSAFE by our only domain propgation
-% operation "bagua removal", we can label that child as definitely SAFE, 
+% operation "bagua removal", we can label that child as definitely SAFE,
 % which means "forget about her".
 
 search(ConstelDict,[],[child(C1,C2,female)|UFems],SMels,ConstelDictOut) :-
@@ -693,15 +704,15 @@ search(ConstelDict,[],[child(C1,C2,female)|UFems],SMels,ConstelDictOut) :-
 % Examine top of the UFems (potentially UNSAFE females) list, with the
 % condition that the list of UMels (potentially UNSAFE males) is empty.
 % If there is a female child that is UNSAFE under the current ConstelDict:
-% Proceed with nondeterministic removal of baguas attached to the female child's 
+% Proceed with nondeterministic removal of baguas attached to the female child's
 % constellations, rendering the two sets of baguas disjoint.
 % (i.e. perform domain propagation on the domains of two constellations).
 % Once rendered SAFE the female child will never be made UNSAFE by our only
-% domain propagation operation "bagua removal", so we can label that child as 
+% domain propagation operation "bagua removal", so we can label that child as
 % definitely SAFE, which means "forget about her" (of course, backtracking over
 % solutions later may unwind the stack of search/5 calls back to this point, and
 % the child may reappear as something to work on).
- 
+
 search(ConstelDict,[],[child(C1,C2,female)|UFems],SMels,ConstelDictOut) :-
    \+ is_safe(C1,C2,female,ConstelDict),
    (verbose -> format("Found unsafe female child (~w,~w)~n",[C1,C2]); true),
@@ -743,7 +754,7 @@ in_search(ConstelDict,UMels,UFems,SMels,ConstelDictOut) :-
    length(SMels,L2),
    format("There are currently ~d unsafe males, ~d unsafe females, ~d tentatively safe males~n",[L0,L1,L2]),
    search(ConstelDict,UMels,UFems,SMels,ConstelDictOut).
- 
+
 % ---
 %% partition_by_sex(+Children,-Mels,-Fems)
 % ---
@@ -763,13 +774,13 @@ search(ConstelDict,Children,ConstelDictOut) :-
    % separate children by sex for easier handling
    partition_by_sex(Children,UMels,UFems),
    in_search(ConstelDict,UMels,UFems,[],ConstelDictOut).
- 
+
 % ---
-%% children_are_safe(+ConstelDict,+Children) :- 
+%% children_are_safe(+ConstelDict,+Children) :-
 % Apply the predicate is_safe/4 to all children (i.e. test whether all the chldren pass is_safe/4)
 % ---
 
-all_children_are_safe(ConstelDict,Children) :- 
+all_children_are_safe(ConstelDict,Children) :-
    forall(
       member(child(C1,C2,Sex),Children),
       is_safe(C1,C2,Sex,ConstelDict)).
@@ -789,9 +800,9 @@ all_children_are_safe(ConstelDict,Children) :-
 
 verbose :- false. % set to true for more printing
 
-main(ConstelDictOut) :- 
+main(ConstelDictOut) :-
    verify_database,
-   format("Verification of database succeeded~n"),   
+   format("Verification of database succeeded~n"),
    load_constellation_to_bagua_set_mapping_into_dict(ConstelDict),
    load_children_into_list(Children),
    !, % not gonna backtrack into the loading above
