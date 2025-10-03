@@ -6,16 +6,15 @@
 % at
 % https://www.coursera.org/learn/solving-algorithms-discrete-optimization/lecture/0nWyf/3-1-5-search
 %
-% but:
-%
-% explicitly in Prolog instead of in MiniZinc.
+% but explicitly in Prolog instead of MiniZinc.
 %
 % This code runs in SWI-Prolog 9.3.5.
 %
 % Problem statement:
 %
 % - There is a cupboard with 10 x 10 drawer matrix, each drawer is given a
-%   coordinate from (1,1) to (10,10)
+%   coordinate from (1,1) to (10,10) in the course material, but
+%   use (0,0) to (9,9) instead.
 % - In each drawer, there a 5 types of seeds associated with 5 different elements.
 %
 % Shennong Shi goes through the drawers by increasing rows in an outer loop and
@@ -36,21 +35,26 @@
 %
 % A possible solution:
 %
-%   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   
-%  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   
-%  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   
-%   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   
-%   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire   
-%   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire   
-%   wood   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   
-%   wood   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   
-%  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   
-%  earth   ,  metal   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water   
+%   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood
+%  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal
+%  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal
+%   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood
+%   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire
+%   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire
+%   wood   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth
+%   wood   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth
+%  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire   ,  earth   ,  water   ,   wood
+%  earth   ,  metal   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water
 
 % ---
 % Available seeds (or rather, seed types). The
 % special type 'none' is used in code but not mentioned here
-% as it will never be selected.
+% as it will never be selected. 
+%
+% Calling seed(X) will instantiate X successively with 
+% metal, wood, water, fire, earth in that order. So we and
+% do backtracking over the possibilities by backtracking
+% into seed(X).
 % ---
 
 seed(metal).
@@ -58,6 +62,15 @@ seed(wood).
 seed(water).
 seed(fire).
 seed(earth).
+
+% Another scheme to generate the elements. In this case, the
+% elements are returned according to a random permutation (computed
+% anew for each node) This makes search more interesting.
+
+seed_random(Element) :-
+   random_permutation([metal,wood,water,fire,earth],Perm),
+   !, % when backtracking, do not go back to generating another permutation
+   member(Element,Perm). % this will set Element successively to the values of the permutation
 
 % ---
 % The generative and destructive (non-symmetric) relationships between elements
@@ -107,7 +120,7 @@ col_count(_DictIn,_Col,0).                 % if the previous clause failed, assu
 
 % ---
 %% no_metal_on_position_zero(+Pos,+Seed)
-% 
+%
 % Choose the non-logical way of expressing this, using cuts.
 % ---
 
@@ -163,32 +176,37 @@ search(100,_,_,Seeds,Seeds) :- !.
 search(Pos,MetalColCountDict,EarthColCountDict,[PrevSeed|Seeds],Result) :-
    Pos < 100,
    % Row and Col go from 0 to 9.
-   divmod(Pos,10,Row,Col),                                                             
+   divmod(Pos,10,Row,Col),
    % Non-deterministically choose a seed (identified with one of the 5 characteristics).
-   seed(CurSeed),                                                                        
-   % Constraint
+
+   seed(CurSeed),
+   % seed_random(CurSeed),
+
+
+   % Constraint on first seed (it would be more efficient to make the decision for the
+   % constraint-passing first seed before recursion is started)
    no_metal_on_position_zero(Pos,CurSeed),
-   % Constraint
+   % Constraint on relationship to previous seed, generative or destructive.
    next_seed_relationship_is_good(Row,Col,PrevSeed,CurSeed),
-   % Inform the user once we have passed the first constrain above
+   % Inform the user once we have passed the first constrain above.
    format("Trying ~|~32t~a~32t~5+ for Pos=~d, Row=~d, Col=~d~n",[CurSeed,Pos,Row,Col]),
    metal_count_per_column_is_good(Row,Col,CurSeed,MetalColCountDict),
    % format("metal_count_per_column_is_good passed for row=~d,col=~d,seed=~w~n",[Row,Col,Seed]),
    earth_count_per_column_is_good(Row,Col,CurSeed,EarthColCountDict),
    % format("earth_count_per_column_is_good passed for row=~d,col=~d,seed=~w~n",[Row,Col,Seed]),
    (
-      CurSeed==metal 
+      CurSeed==metal
       ->
-      inc_col_count(MetalColCountDict,Col,MetalColCountDictNext)
+      inc_col_count(MetalColCountDict,Col,MetalColCountDictNext) % build new dict
       ;
-      MetalColCountDictNext = MetalColCountDict
+      MetalColCountDictNext = MetalColCountDict % use existing dict
    ),
    (
       CurSeed==earth
       ->
-      inc_col_count(EarthColCountDict,Col,EarthColCountDictNext)
+      inc_col_count(EarthColCountDict,Col,EarthColCountDictNext) % build new dict
       ;
-      EarthColCountDictNext = EarthColCountDict
+      EarthColCountDictNext = EarthColCountDict % use existing dict
    ),
    succ(Pos,PosNext),
    % Recursive call follows
@@ -215,4 +233,4 @@ main :-
    search(0,_{},_{},[none],ReverseSeeds),
    reverse(ReverseSeeds,[none|Seeds]),
    display(Seeds,0).
- 
+
