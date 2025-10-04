@@ -46,6 +46,12 @@
 %  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire   ,  earth   ,  water   ,   wood
 %  earth   ,  metal   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water
 
+
+% We will be using the CLP(FD) predicate "#=" for integer equality
+% rather than the nasties "is/2" and "=:=/2"
+
+:- use_module(library(clpfd)).
+
 % ---
 % Available seeds (or rather, seed types). The
 % special type 'none' is used in code but not mentioned here
@@ -171,17 +177,26 @@ next_seed_relationship_is_good(_,_,PrevSeed,CurSeed) :-        % otherwise disju
 % seeds selected from each drawer. The position goes from 0 to 99.
 % ---
 
+sequential_proposal :- true. % set to false for "random proposal"
+
 search(100,_,_,Seeds,Seeds) :- !.
 
 search(Pos,MetalColCountDict,EarthColCountDict,[PrevSeed|Seeds],Result) :-
    Pos < 100,
    % Row and Col go from 0 to 9.
    divmod(Pos,10,Row,Col),
-   % Non-deterministically choose a seed (identified with one of the 5 characteristics).
 
-   seed(CurSeed),
-   % seed_random(CurSeed),
+   % Non-deterministically choose a seed. 
+   % (directly identified with one of the 5 characteristics 
+   % metal, wood, water, fire, earth.)
+   % We provide two ways of choosing the seed.
+   % Note that there is no restriction on the seed proposed by
+   % seed/1, we just blindly propose and then test whether the
+   % constraints hold. For more efficiency, one would probably
+   % provide more info to the seed/N predicate so that it can
+   % make more informed proposal.
 
+   (sequential_proposal -> seed(CurSeed) ; seed_random(CurSeed)),
 
    % Constraint on first seed (it would be more efficient to make the decision for the
    % constraint-passing first seed before recursion is started)
@@ -226,11 +241,65 @@ display([S|Seeds],Pos) :-
    display(Seeds,PosNext).
 
 % ---
+% Verification of result
+% ---
+
+extract_col(Col,Seeds,ColEntries) :-
+   bagof(Element,
+         Row^Index^(
+            between(0,9,Row),
+            Index #= Col+Row*10,
+            nth0(Index,Seeds,Element)
+         ),
+         ColEntries),
+   % format("Extracted col ~d is ~w~n",[Col,ColEntries]),
+   true. % only exists to make the previous line out-commentable
+
+extract_row(Row,Seeds,RowEntries) :-
+   bagof(Element,
+         Col^Index^(
+            between(0,9,Col),
+            Index #= Col+Row*10,
+            nth0(Index,Seeds,Element)
+         ),
+         RowEntries),
+   % format("Extracted row ~d is ~w~n",[Row,RowEntries]),
+   true. % only exists to make the previous line out-commentable
+
+verify_col(Col,ChosenElement,Seeds) :-
+   extract_col(Col,Seeds,ColEntries),
+   aggregate(count, (member(X, ColEntries), X == ChosenElement), Count),
+   % format("Count for column ~d and element ~w is ~d~n",[Col,ChosenElement,Count]),
+   between(1,2,Count).
+
+verify_row_successor_relationship([]).
+verify_row_successor_relationship([_]).
+verify_row_successor_relationship([X,Y|Rest]) :-
+   (generative(X,Y);destructive(X,Y)),
+   verify_row_successor_relationship([Y|Rest]).
+
+verify_row(Row,Seeds) :-
+   extract_row(Row,Seeds,RowEntries),
+   verify_row_successor_relationship(RowEntries).
+   
+verify(Seeds) :-
+   (nth0(0,Seeds,metal) -> false ; true),
+   % format("First seed is not 'metal'~n"),
+   numlist(0, 9, Indexes),
+   forall(member(Row,Indexes),verify_row(Row,Seeds)),
+   % format("Rows are good~n"),
+   forall(member(Col,Indexes),verify_col(Col,metal,Seeds)),
+   % format("Cols are good for 'metal'~n"),
+   forall(member(Col,Indexes),verify_col(Col,earth,Seeds)),
+   % format("Cols are good for 'earth'~n"),
+   true. % only exists to make the previous line out-commentable
+
+% ---
 % Kick off the search, then print the results.
 % ---
 
 main :-
    search(0,_{},_{},[none],ReverseSeeds),
-   reverse(ReverseSeeds,[none|Seeds]),
-   display(Seeds,0).
-
+   reverse(ReverseSeeds,[none|Seeds]), % drop the artificial 'none' entry
+   display(Seeds,0),
+   assertion(verify(Seeds)).
