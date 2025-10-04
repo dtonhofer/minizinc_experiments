@@ -9,29 +9,49 @@
 % but explicitly in Prolog instead of MiniZinc.
 %
 % This code runs in SWI-Prolog 9.3.5.
+% The CLP(FD) (constraint logic programming over finite domains) is
+% used for the #=/2 (integer equal) predicate.
 %
-% Problem statement:
+% Problem statement
+% -----------------
 %
-% - There is a cupboard with 10 x 10 drawer matrix, each drawer is given a
-%   coordinate from (1,1) to (10,10) in the course material, but
-%   use (0,0) to (9,9) instead.
-% - In each drawer, there a 5 types of seeds associated with 5 different elements.
+% The problem describes a search tree of depth 100 and constant branching factor 5.
 %
-% Shennong Shi goes through the drawers by increasing rows in an outer loop and
-% increasing columns in an inner loop.
-% He selects a seed from each drawer while upholding certain constraints.
-% Once he has traversed all 100 drawers upheld all constraints, he has a valid
-% seed set.
+% - There is a cupboard with 10 x 10 drawers, traversed by row first, column second,
+%   defining 100 places.
+%   Each drawer is given a coordinate from (1,1) to (10,10) in the course material.
+%   We use (0,0) to (9,9) instead.
 %
-% This is finding a path through a tree of branching factor 5 and height 100 nodes.
+% - In each drawer, there a 5 types of seeds associated with 5 different elements,
+%   metal, woof, water, fire, earth.
 %
-% Contraints are as follows:
+% - Shennong Shi goes through the drawers by row first, column second.
 %
-% - The elements of the seeds taken from adjacent drawers in the same row need to
-%   obey certain generative or destructive relationships.
-% - The seeds in the first drawer cannot be not be associated with metal.
-% - Between 1 and 2 seeds in a column have to be associated with "metal".
-% - Between 1 and 2 seeds in a column have to be associated with "earth".
+% - He selects a seed from the 5 in each each drawer while upholding certain constraints
+%   among the seeds already selected and the new seed.
+%
+% - Once he has traversed all 100 drawers and upheld all constraints, he has a valid
+%   seed sequence.
+%
+% Constraints are as follows:
+%
+% - The elements of the seeds selected from adjacent drawers (a drawer and its successor
+%   drawer) *in the same row* must obey either a "generative" or a "destructive"
+%   relationships (freely selected), as follows:
+%
+%   generative             destructive
+%   ----------             -----------
+%   water -> wood          water -> fire
+%   wood  -> fire          fire -> metal
+%   fire  -> earth         metal -> wood
+%   earth -> metal         wood -> earth
+%   metal -> water         earth -> water
+%
+% - The seed from the first drawer cannot be associated with "metal".
+%
+% - In each column, between 1 and 2 seeds must be associated with "metal".
+%
+% - In each column, between 1 and 2 seeds must be associated with "earth".
 %
 % A possible solution:
 %
@@ -45,7 +65,7 @@
 %   wood   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth
 %  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire   ,  earth   ,  water   ,   wood
 %  earth   ,  metal   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water
-
+% ---
 
 % We will be using the CLP(FD) predicate "#=" for integer equality
 % rather than the nasties "is/2" and "=:=/2"
