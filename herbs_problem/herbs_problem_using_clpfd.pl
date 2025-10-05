@@ -33,15 +33,13 @@ element(fire,  4).
 element(earth, 5).
 
 % ---
-% Contraint between two adjacent cells (aka. vars/drawers/cols) in each row.
-% We are using an "automaton" which accepts if the constraint is upheld:
+% Contraint between successive cells (aka. vars/drawers/cols) in each row.
+% We are using an "automaton" which "accepts" if the constraint is upheld:
 % https://www.swi-prolog.org/pldoc/doc_for?object=automaton/3
 % as there seems to be no way to express a constraint using a
 % predicate directly as with "table" in MiniZinc:
 % https://docs.minizinc.dev/en/stable/lib-globals-extensional.html
-%
-% An alternative would be to create an "automaton" for
-% a whole row instead of just two adjacent cells.
+% The state diagram of the automaton should accompany this text file.
 % ---
 
 constraint_on_single_row(Row,Seeds,VarList) :-
