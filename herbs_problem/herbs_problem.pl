@@ -5,72 +5,25 @@
 % presented by Professors Peter James Stucky and Jimmy Ho Man Lee.
 % at
 % https://www.coursera.org/learn/solving-algorithms-discrete-optimization/lecture/0nWyf/3-1-5-search
-%
-% but explicitly in Prolog instead of MiniZinc.
+% ---
+
+% ---
+% In the course, the problem is solved using MiniZinc, here we solve it with
+% SWI-Prolog, which is not as declarative, but still quite instructive.
 %
 % This code runs in SWI-Prolog 9.3.5.
+%
 % The CLP(FD) (constraint logic programming over finite domains) is
 % used for the #=/2 (integer equal) predicate.
 %
-% Problem statement
-% -----------------
-%
-% The problem describes a search tree of depth 100 and constant branching factor 5.
-%
-% - There is a cupboard with 10 x 10 drawers, traversed by row first, column second,
-%   defining 100 places.
-%   Each drawer is given a coordinate from (1,1) to (10,10) in the course material.
-%   We use (0,0) to (9,9) instead.
-%
-% - In each drawer, there a 5 types of seeds associated with 5 different elements,
-%   metal, woof, water, fire, earth.
-%
-% - Shennong Shi goes through the drawers by row first, column second.
-%
-% - He selects a seed from the 5 in each each drawer while upholding certain constraints
-%   among the seeds already selected and the new seed.
-%
-% - Once he has traversed all 100 drawers and upheld all constraints, he has a valid
-%   seed sequence.
-%
-% Constraints are as follows:
-%
-% - The elements of the seeds selected from adjacent drawers (a drawer and its successor
-%   drawer) *in the same row* must obey either a "generative" or a "destructive"
-%   relationships (freely selected), as follows:
-%
-%   generative             destructive
-%   ----------             -----------
-%   water -> wood          water -> fire
-%   wood  -> fire          fire -> metal
-%   fire  -> earth         metal -> wood
-%   earth -> metal         wood -> earth
-%   metal -> water         earth -> water
-%
-% - The seed from the first drawer cannot be associated with "metal".
-%
-% - In each column, between 1 and 2 seeds must be associated with "metal".
-%
-% - In each column, between 1 and 2 seeds must be associated with "earth".
-%
-% A possible solution:
-%
-%   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood
-%  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal
-%  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal
-%   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood   ,   fire   ,  metal   ,   wood
-%   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire
-%   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire
-%   wood   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth
-%   wood   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth
-%  water   ,   wood   ,   fire   ,  earth   ,  metal   ,   wood   ,   fire   ,  earth   ,  water   ,   wood
-%  earth   ,  metal   ,   wood   ,   fire   ,  earth   ,  water   ,   wood   ,   fire   ,  earth   ,  water
+% We will be using the CLP(FD) predicate "#=" for integer equality
+% rather than the less declarative predicate "is/2" or "=:=/2"
 % ---
 
-% We will be using the CLP(FD) predicate "#=" for integer equality
-% rather than the nasties "is/2" and "=:=/2"
-
 :- use_module(library(clpfd)).
+:- use_module('modules/extract_row_or_col.pl').
+:- use_module('modules/verify_herbs_solution.pl').
+:- use_module('modules/display_herbs_solution.pl').
 
 % ---
 % Available seeds (or rather, seed types). The
@@ -89,9 +42,11 @@ seed(water).
 seed(fire).
 seed(earth).
 
+% ---
 % Another scheme to generate the elements. In this case, the
 % elements are returned according to a random permutation (computed
 % anew for each node) This makes search more interesting.
+% ---
 
 seed_random(Element) :-
    random_permutation([metal,wood,water,fire,earth],Perm),
@@ -139,10 +94,6 @@ col_count(DictIn,Col,N) :-
    get_dict(Col,DictIn,N),!.               % get the value, which exists if get_dict/3 succeeds
 
 col_count(_DictIn,_Col,0).                 % if the previous clause failed, assume 0.
-
-% ===
-% Constraints
-% ===
 
 % ---
 %% no_metal_on_position_zero(+Pos,+Seed)
@@ -193,30 +144,29 @@ next_seed_relationship_is_good(_,_,PrevSeed,CurSeed) :-        % otherwise disju
     generative(PrevSeed,CurSeed);destructive(PrevSeed,CurSeed).
 
 % ---
-% The path through the search space is given by a reverse list of
-% seeds selected from each drawer. The position goes from 0 to 99.
+%% search(+Pos,+MetalColCountDict,+EarthColCountDict,+GrowingListOfSeeds,-FinalListOfSeeds)
 % ---
-
-sequential_proposal :- true. % set to false for "random proposal"
 
 search(100,_,_,Seeds,Seeds) :- !.
 
 search(Pos,MetalColCountDict,EarthColCountDict,[PrevSeed|Seeds],Result) :-
    Pos < 100,
    % Row and Col go from 0 to 9.
+   % Col changes fastest (is the 2nd dimension)
+   % Row changes slowest (is the 1st dimension)
    divmod(Pos,10,Row,Col),
 
    % Non-deterministically choose a seed. 
    % (directly identified with one of the 5 characteristics 
    % metal, wood, water, fire, earth.)
-   % We provide two ways of choosing the seed.
+   % We provide two ways of choosing the seed: sequential ("seq") and 
+   % randomly ("rand").
    % Note that there is no restriction on the seed proposed by
    % seed/1, we just blindly propose and then test whether the
    % constraints hold. For more efficiency, one would probably
    % provide more info to the seed/N predicate so that it can
    % make more informed proposal.
-
-   (sequential_proposal -> seed(CurSeed) ; seed_random(CurSeed)),
+   (proposal(seq) -> seed(CurSeed) ; seed_random(CurSeed)),
 
    % Constraint on first seed (it would be more efficient to make the decision for the
    % constraint-passing first seed before recursion is started)
@@ -248,78 +198,44 @@ search(Pos,MetalColCountDict,EarthColCountDict,[PrevSeed|Seeds],Result) :-
    search(PosNext,MetalColCountDictNext,EarthColCountDictNext,[CurSeed,PrevSeed|Seeds],Result).
 
 % ---
-% Printing results
+% How the seeds are proposed during search: "sequentially" or "at random".
+% This can be changed on the Prolog command line by issuing:
+% ?- set_proposal(rand).
+% ?- set_proposal(seq).
+% To query current setting:
+% ?- proposal(X). 
 % ---
 
-display([],100).
-display([S|Seeds],Pos) :-
-   assertion(Pos < 100),
-   divmod(Pos,10,_,Col),
-   format("~|~32t~a~32t~10+",[S]),
-   ((Col == 9) -> format("~n",[]) ; format(",",[])),
-   succ(Pos,PosNext),
-   display(Seeds,PosNext).
+:- dynamic proposal/1. % proposal/1 can be modified at runtime
 
-% ---
-% Verification of result
-% ---
+set_proposal(What) :-
+   assertion((atom(What),member(What,[seq,rand]))),
+   retractall(proposal(_)),
+   asserta(proposal(What)).
 
-extract_col(Col,Seeds,ColEntries) :-
-   bagof(Element,
-         Row^Index^(
-            between(0,9,Row),
-            Index #= Col+Row*10,
-            nth0(Index,Seeds,Element)
-         ),
-         ColEntries),
-   % format("Extracted col ~d is ~w~n",[Col,ColEntries]),
-   true. % only exists to make the previous line out-commentable
-
-extract_row(Row,Seeds,RowEntries) :-
-   bagof(Element,
-         Col^Index^(
-            between(0,9,Col),
-            Index #= Col+Row*10,
-            nth0(Index,Seeds,Element)
-         ),
-         RowEntries),
-   % format("Extracted row ~d is ~w~n",[Row,RowEntries]),
-   true. % only exists to make the previous line out-commentable
-
-verify_col(Col,ChosenElement,Seeds) :-
-   extract_col(Col,Seeds,ColEntries),
-   aggregate(count, (member(X, ColEntries), X == ChosenElement), Count),
-   % format("Count for column ~d and element ~w is ~d~n",[Col,ChosenElement,Count]),
-   between(1,2,Count).
-
-verify_row_successor_relationship([]).
-verify_row_successor_relationship([_]).
-verify_row_successor_relationship([X,Y|Rest]) :-
-   (generative(X,Y);destructive(X,Y)),
-   verify_row_successor_relationship([Y|Rest]).
-
-verify_row(Row,Seeds) :-
-   extract_row(Row,Seeds,RowEntries),
-   verify_row_successor_relationship(RowEntries).
-   
-verify(Seeds) :-
-   (nth0(0,Seeds,metal) -> false ; true),
-   % format("First seed is not 'metal'~n"),
-   numlist(0, 9, Indexes),
-   forall(member(Row,Indexes),verify_row(Row,Seeds)),
-   % format("Rows are good~n"),
-   forall(member(Col,Indexes),verify_col(Col,metal,Seeds)),
-   % format("Cols are good for 'metal'~n"),
-   forall(member(Col,Indexes),verify_col(Col,earth,Seeds)),
-   % format("Cols are good for 'earth'~n"),
-   true. % only exists to make the previous line out-commentable
+:- set_proposal(seq). % initial setting
 
 % ---
 % Kick off the search, then print the results.
+% How to run it on the Prolog command line:
+% ?- ['herbs_problem.pl'].
+% ?- main.
 % ---
 
 main :-
+   % Start search:
+   % - At position 0
+   % - With two empty dicts that will grow to handle the 
+   %   mappings "col -> #earth", "col -> #metal"
+   % - With the growing list of elements (aka seeds) starting
+   %   as the list [none] to have an unused "previous seed" at
+   %   position 0.
+   %   This list grows at its front (by prepending), not at its back,
+   %   so it has to be reversed once we are done.
+   % - With the var "ReverseSeeds" unified with the final list
+   %   of elements at recursion end (i.e. at position 100).
    search(0,_{},_{},[none],ReverseSeeds),
-   reverse(ReverseSeeds,[none|Seeds]), % drop the artificial 'none' entry
+   % Drop the artificial 'none' entry when reversing.
+   reverse(ReverseSeeds,[none|Seeds]),
    display(Seeds,0),
    assertion(verify(Seeds)).
