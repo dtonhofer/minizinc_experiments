@@ -155,28 +155,39 @@ output [
     concat( [ show_int(2, knight_move_ids[m] ) ++ " " | m in MOVE_INDEX_LESS_ONE] )
 ];
 
-% With Cuffed 0.13.2 
+% With Chuffed 0.13.2
+% on a "12th Gen Intel(R) Core(TM) i3-12100", 1 core being used
 % using "int_search(knight_move_ids, input_order, indomain_median) satisfy;"
-% a solution is found within seconds with:
+% a solution is found within seconds
+% (Geocode 6.3.0 finds no solution even after 15 minutes)
+% with:
+%
 % constraint board[2,1] > board[1,2];
 %
-% bool: use_constraint1 = false; 
+% bool: use_constraint1 = false;
 % bool: use_constraint2 = true; --> 20s
 %
-% bool: use_constraint1 = true; 
+% bool: use_constraint1 = true;
 % bool: use_constraint2 = false; --> 2s
 %
-% bool: use_constraint1 = true; 
+% bool: use_constraint1 = true;
 % bool: use_constraint2 = true; --> 22s
 %
-%  1 44 57 46  3 30 15 12 
-% 56 47  2 31 16 13 18  5 
-% 43 58 45 50 29  4 11 14 
-% 48 55 42 59 32 17  6 19 
-% 41 60 49 36 51 28 23 10 
-% 54 63 38 33 26  9 20  7 
-% 61 40 35 52 37 22 27 24 
-% 64 53 62 39 34 25  8 21 
+%
+%  1 44 57 46  3 30 15 12
+% 56 47  2 31 16 13 18  5
+% 43 58 45 50 29  4 11 14
+% 48 55 42 59 32 17  6 19
+% 41 60 49 36 51 28 23 10
+% 54 63 38 33 26  9 20  7
+% 61 40 35 52 37 22 27 24
+% 64 53 62 39 34 25  8 21
+%
+% 5  4  6  4  7  6  7  2  4  2  3  8  5  2  8  6  3  6  7
+% 6  1  3  6  8  2  5  2  2  3  8  6  7  6  1  3  6  1  6
+% 1  2  4  1  3  6  3  8  7  5  3  6  7  8  2  3  2  4  7
+% 5  8  7  5  2  7
 % ----------
-% Finished in 1m 6s.
+% Finished in 2s 996msec.
+%
 
